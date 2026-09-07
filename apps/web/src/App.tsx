@@ -1,7 +1,6 @@
 import { Suspense, lazy, type ReactNode } from 'react';
-import { Navigate, Outlet, RouterProvider, createBrowserRouter } from 'react-router';
+import { Navigate, RouterProvider, createBrowserRouter } from 'react-router';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
-import { UpdatePrompt } from './components/UpdatePrompt.js';
 import { Home } from './routes/Home.js';
 import { NotAvailable } from './routes/NotAvailable.js';
 import { NotFound } from './routes/NotFound.js';
@@ -13,6 +12,23 @@ const ScoreboardIndex = lazy(() =>
 );
 const ScoreboardCourt = lazy(() =>
   import('./routes/scoreboard/ScoreboardCourt.js').then((m) => ({ default: m.ScoreboardCourt })),
+);
+const AdminLayout = lazy(() =>
+  import('./routes/admin/AdminLayout.js').then((m) => ({ default: m.AdminLayout })),
+);
+const Live = lazy(() => import('./routes/admin/Live.js').then((m) => ({ default: m.Live })));
+const Settings = lazy(() =>
+  import('./routes/admin/Settings.js').then((m) => ({ default: m.Settings })),
+);
+const Courts = lazy(() => import('./routes/admin/Courts.js').then((m) => ({ default: m.Courts })));
+const Formats = lazy(() =>
+  import('./routes/admin/Formats.js').then((m) => ({ default: m.Formats })),
+);
+const Seasons = lazy(() =>
+  import('./routes/admin/Seasons.js').then((m) => ({ default: m.Seasons })),
+);
+const Competitions = lazy(() =>
+  import('./routes/admin/Competitions.js').then((m) => ({ default: m.Competitions })),
 );
 const ControllerIndex = lazy(() =>
   import('./routes/controller/ControllerIndex.js').then((m) => ({ default: m.ControllerIndex })),
@@ -86,12 +102,59 @@ const router = createBrowserRouter([
     path: '/admin',
     element: (
       <Boundary label="Admin">
-        <UpdatePrompt />
-        <Outlet />
+        <AdminLayout />
       </Boundary>
     ),
     children: [
       { index: true, element: <Navigate to="/admin/live" replace /> },
+      {
+        path: 'live',
+        element: (
+          <Boundary label="Live control">
+            <Live />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'settings',
+        element: (
+          <Boundary label="Settings">
+            <Settings />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'courts',
+        element: (
+          <Boundary label="Courts">
+            <Courts />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'formats',
+        element: (
+          <Boundary label="Formats">
+            <Formats />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'seasons',
+        element: (
+          <Boundary label="Seasons">
+            <Seasons />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'competitions',
+        element: (
+          <Boundary label="Competitions">
+            <Competitions />
+          </Boundary>
+        ),
+      },
       { path: '*', element: <NotAvailable title="Admin" /> },
     ],
   },

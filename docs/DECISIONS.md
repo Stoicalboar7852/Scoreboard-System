@@ -111,3 +111,10 @@ implementation and are open for the owner to overturn.
   offline and needs no asset; it stays silent until the browser allows audio (gesture or kiosk flag).
 - D-034 (Phase 6): A 2-second press-and-hold anywhere on the scoreboard reopens the court picker, so a
   kiosk can be re-pointed without a keyboard while the page itself has no visible controls.
+- D-035 (Phase 7): The live page can create tonight's session on the spot (date, first slot, slot
+  length, slot count, link flag) so an operator can run an unscheduled night with Quick games before
+  the Phase 8 grid editor exists; fixtures for such a night come from Quick game or Assign.
+- D-036 (Phase 7): Game formats are edited in minutes (halves, half time, gap) and stored in seconds;
+  time outs stay in seconds.
+- D-037 (Phase 7): The finals template is edited as JSON validated by the shared schema rather than a
+  bespoke form, since the default template covers the venue and custom brackets are rare.

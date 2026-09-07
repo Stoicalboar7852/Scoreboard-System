@@ -12,7 +12,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 4 | Web app shell | done | Router, theme tokens, socket client + time sync, live store, offline queue, error boundaries, PWA, wake lock, version reload |
 | 5 | Controller | done | PIN gate, court picker, exact layout, all phases, time outs, idle rules, optimistic/offline scoring, Playwright smoke |
 | 6 | Scoreboard | done | Kiosk page, one-time picker, proportional 1080p/4K scaling, optional horn, KIOSK-SETUP.md |
-| 7 | Admin: live control and setup | not started | |
+| 7 | Admin: live control and setup | done | Login/layout, /admin/live (clocks, court grid, quick game, warnings), settings/courts/formats/seasons/competitions with ladder rule editor, teams, players, clash links |
 | 8 | Admin: sessions, manual entry, Excel import/export | not started | |
 | 9 | Draw generation and finals | not started | |
 | 10 | Results, ladders, public pages | not started | |
@@ -119,6 +119,27 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   still green (2 tests). Root: 311 tests, typecheck and lint pass.
 - `docs/KIOSK-SETUP.md` written for Windows 10 IoT Enterprise LTSC with Edge (assigned access or
   startup shortcut flags, power, autologon, audio, re-pointing, troubleshooting).
+
+### Phase 7 — Admin: live control and setup
+- `AdminLayout` guards every `/admin` route (redirects to `/login`), sidebar navigation, sign out.
+- `/admin/live`: session header (date, status, Go live / End night with confirmation, "Pairs wait for
+  Fours" checkbox that updates the planned session or re-links live clocks, "Create tonight's session"
+  when none exists), one `ClockCard` per clock (Single game / Auto toggle, phase label, big countdown,
+  slot cursor "Slot n of m", Start / Pause / Resume / +30 s / −30 s / Skip phase / End game / Next slot /
+  Reset), warnings row, `CourtGrid` (fixture, status, editable scores, time-out badge, controller and
+  scoreboard last-seen badges, Assign fixture dialog, Quick game dialog, End game, Reopen, End time out,
+  Clear).
+- Setup: Settings (venue, timezone, PIN, window, time-out length, horn, accent colour overrides,
+  password change, device list with revoke), Courts, Formats (minutes in the form, seconds on the
+  wire), Seasons (dates, weeks, skipped dates, finals template JSON with validation, status),
+  Competitions (per season: night, format, publish, `LadderRuleEditor` with presets → Custom, bonus,
+  ordered tiebreakers; Teams panel; Players panel with team membership; Clash links panel showing
+  explicit links and roster-derived clashes).
+- Tests: ClockCard (4), CourtGrid + seenLabel (3), LadderRuleEditor (2). Web suite: 12 files, 51
+  tests. Root: 320 tests, typecheck and lint (warnings only) pass.
+- Verified in a headless browser session: login → Live (planned) → Go live → two clocks (Pairs linked to
+  Fours) → Start → Half 1 running with courts showing live fixtures; competitions, settings, courts,
+  formats and seasons pages render with the seeded data and no console errors.
 
 ## Known gaps / TODO register
 

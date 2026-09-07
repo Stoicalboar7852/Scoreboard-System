@@ -6,7 +6,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 0 | Scaffold | done | pnpm workspace, Fastify /healthz, Vite placeholder, Docker/Compose/Caddy, local Postgres script |
-| 1 | Shared domain package | not started | |
+| 1 | Shared domain package | done | 224 tests, 97% statements / 91% branches coverage |
 | 2 | Database and REST API | not started | |
 | 3 | Real-time layer | not started | |
 | 4 | Web app shell | not started | |
@@ -18,6 +18,18 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 10 | Results, ladders, public pages | not started | |
 | 11 | Hardening | not started | |
 | 12 | Deployment and hand-over | not started | |
+
+### Phase 1 — Shared domain package
+- Modules: domain enums/entities/live-state/inputs (Zod), socket event registry, clock reducer +
+  fast-forward + display helper, time-out and score helpers, ladder rule (discriminated union) and
+  engine, draw generator (round robin, dates, DFS + local search assignment, conflict report), clash
+  validator, finals template + resolver, Excel row parser, theme tokens + WCAG contrast check, time
+  formatting, idle-screen logic.
+- `pnpm --filter @scoreboard/shared test:coverage`: 18 files, 224 tests pass. Coverage 97.38%
+  statements, 91.03% branches, 98.19% functions, 98.82% lines (threshold 90/85/90/90 enforced).
+- Draw performance test (10 competitions × 12 teams × 20 weeks, 4 nights, 10 courts, clash links)
+  runs in about 1 s on the dev laptop against the 10 s target.
+- `pnpm typecheck` and `pnpm lint`: pass.
 
 ## Known gaps / TODO register
 

@@ -48,3 +48,21 @@ implementation and are open for the owner to overturn.
 - D-004 (Phase 0): Zod 4 is used (current stable major); schemas live in `packages/shared`.
 - D-005 (Phase 0): The folder was not a git repository; one was initialised so every phase can be
   committed as the brief requests. No remote is configured.
+- D-006 (Phase 1): Ladder "played" counts games actually played (wins + draws + losses, including
+  forfeits); byes are shown in their own column and are not counted as played.
+- D-007 (Phase 1): Ladder percentage is `for / against × 100`, rounded to 2 decimals. When nothing has
+  been conceded it is `for × 100` (finite, sorts above everything) and 0 for 0/0, so it survives JSON.
+- D-008 (Phase 1): While a clock is WAITING_FOR_LINKED its status is IDLE with a zero duration; the
+  scheduler arms no timer for it and displays show the linked clock's remaining time.
+- D-009 (Phase 1): `adjust(±seconds)` changes the phase duration while running (so
+  `phaseStartedAtMs` stays truthful), the stored remaining time while paused, and the upcoming half
+  length in PRE_GAME. Remaining time never drops below zero; a negative adjustment past zero expires
+  the phase on the next sweep.
+- D-010 (Phase 1): Skipping a phase from PAUSED resumes into the next phase; "end game" from any half
+  behaves exactly like Half 2 expiring at that moment.
+- D-011 (Phase 1): The draw generator opens no extra slots by default (§8.2). Each night has an
+  `extraSlots` allowance the admin can raise in the season wizard; the conflict report suggests it.
+- D-012 (Phase 1): Circle-method rounds are numbered per competition; when the season is longer than
+  one cycle the cycle repeats with home/away flipped, and the generator warns when it is shorter.
+- D-013 (Phase 1): Finals participants are resolved from a template each time results change rather
+  than being written once, so a corrected semi-final score re-resolves the grand final automatically.

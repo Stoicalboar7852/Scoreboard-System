@@ -42,6 +42,27 @@ const PrintView = lazy(() =>
 const SeasonDraw = lazy(() =>
   import('./routes/admin/SeasonDraw.js').then((m) => ({ default: m.SeasonDraw })),
 );
+const Results = lazy(() =>
+  import('./routes/admin/Results.js').then((m) => ({ default: m.Results })),
+);
+const Ladders = lazy(() =>
+  import('./routes/admin/Ladders.js').then((m) => ({ default: m.Ladders })),
+);
+const PublicLayout = lazy(() =>
+  import('./routes/public/PublicLayout.js').then((m) => ({ default: m.PublicLayout })),
+);
+const LaddersIndex = lazy(() =>
+  import('./routes/public/LaddersIndex.js').then((m) => ({ default: m.LaddersIndex })),
+);
+const LadderPage = lazy(() =>
+  import('./routes/public/LadderPage.js').then((m) => ({ default: m.LadderPage })),
+);
+const DrawPage = lazy(() =>
+  import('./routes/public/DrawPage.js').then((m) => ({ default: m.DrawPage })),
+);
+const TonightPage = lazy(() =>
+  import('./routes/public/TonightPage.js').then((m) => ({ default: m.TonightPage })),
+);
 const ControllerIndex = lazy(() =>
   import('./routes/controller/ControllerIndex.js').then((m) => ({ default: m.ControllerIndex })),
 );
@@ -199,40 +220,65 @@ const router = createBrowserRouter([
           </Boundary>
         ),
       },
+      {
+        path: 'results',
+        element: (
+          <Boundary label="Results">
+            <Results />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'ladders',
+        element: (
+          <Boundary label="Ladders">
+            <Ladders />
+          </Boundary>
+        ),
+      },
       { path: '*', element: <NotAvailable title="Admin" /> },
     ],
   },
   {
-    path: '/ladders',
     element: (
-      <Boundary label="Ladders">
-        <NotAvailable title="Ladders" />
+      <Boundary label="Public pages">
+        <PublicLayout />
       </Boundary>
     ),
-  },
-  {
-    path: '/ladders/:competitionId',
-    element: (
-      <Boundary label="Ladder">
-        <NotAvailable title="Ladder" />
-      </Boundary>
-    ),
-  },
-  {
-    path: '/draw/:competitionId',
-    element: (
-      <Boundary label="Draw">
-        <NotAvailable title="Draw" />
-      </Boundary>
-    ),
-  },
-  {
-    path: '/tonight',
-    element: (
-      <Boundary label="Tonight">
-        <NotAvailable title="Tonight" />
-      </Boundary>
-    ),
+    children: [
+      {
+        path: '/ladders',
+        element: (
+          <Boundary label="Ladders">
+            <LaddersIndex />
+          </Boundary>
+        ),
+      },
+      {
+        path: '/ladders/:competitionId',
+        element: (
+          <Boundary label="Ladder">
+            <LadderPage />
+          </Boundary>
+        ),
+      },
+      {
+        path: '/draw/:competitionId',
+        element: (
+          <Boundary label="Draw">
+            <DrawPage />
+          </Boundary>
+        ),
+      },
+      {
+        path: '/tonight',
+        element: (
+          <Boundary label="Tonight">
+            <TonightPage />
+          </Boundary>
+        ),
+      },
+    ],
   },
   { path: '*', element: <NotFound /> },
 ]);

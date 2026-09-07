@@ -134,3 +134,8 @@ implementation and are open for the owner to overturn.
 - D-044 (Phase 9): Finals matches are placed on the requested night at `startSlot + slotOffset`, trying
   the given courts in order and skipping any court where the shared validator reports a clash or
   double booking; if no court works the generation fails with the issues rather than placing badly.
+- D-045 (Phase 10): Public pages poll every 60 s (ladders) / 5 min (draws) and `/tonight` joins the
+  live session's socket room, so a result entered in admin appears on the public ladder on the next
+  refresh without any push infrastructure for ladders.
+- D-046 (Phase 10): The ladder PNG snapshot is rendered client-side from the admin ladder DOM
+  (html-to-image), so it always matches what the admin sees and needs no server-side browser.

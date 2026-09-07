@@ -15,7 +15,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 7 | Admin: live control and setup | done | Login/layout, /admin/live (clocks, court grid, quick game, warnings), settings/courts/formats/seasons/competitions with ladder rule editor, teams, players, clash links |
 | 8 | Admin: sessions, manual entry, Excel import/export | done | Session list, slots × courts grid with badges, cell editor, import preview/commit, exports, print, publish |
 | 9 | Draw generation and finals | done | Season wizard, preview/commit with conflict report, regenerate per week, publish, lock ladder + finals with auto-resolution |
-| 10 | Results, ladders, public pages | not started | |
+| 10 | Results, ladders, public pages | done | Results editing, adjustments, ladder PNG/CSV/copy link, public /ladders, /ladders/:id, /draw/:id, /tonight |
 | 11 | Hardening | not started | |
 | 12 | Deployment and hand-over | not started | |
 
@@ -184,6 +184,24 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   DrawSummary/ConflictReport (2). Root: 337 tests, typecheck and lint pass.
 - Verified in a headless browser: the seeded Wednesday season previews with 10 nights in 67 ms and
   finals generate for C Grade Mixed Fours with SF1/SF2/PF/GF, seeds and placeholder labels.
+
+### Phase 10 — Results, ladders, public pages
+- `/admin/results`: competition/round/status filters, result dialog (scores, completed / forfeit with
+  side / cancelled / reopen, notes); every edit hits `PUT /api/fixtures/:id/result` and is audited with
+  before/after. Ladders, finals and fixture queries refresh after a save.
+- `/admin/ladders`: competition select, shared `LadderTable` (P/W/D/L/Bye/FF/For/Agst/Diff/%/Bonus/Adj/
+  Pts with finals qualifiers highlighted), rule summary, adjustments (± points with a required reason,
+  list, remove), CSV export, PNG snapshot (html-to-image at 2×), copy public link, link to the finals
+  wizard.
+- Public: `PublicLayout` (venue name, Ladders / Tonight nav, connection dot), `/ladders` grouped by
+  night refreshing every 60 s, `/ladders/:competitionId` (ladder + last round results + next round
+  fixtures with time and court), `/draw/:competitionId` (season by round), `/tonight` (schedule when
+  planned; live court grid with scores, phase and countdown fed by the session socket room when live).
+- Tests: LadderTable (2, including the 40-point win = 10 ladder points example) and ResultDialog (2,
+  forfeit requires a side). Web suite: 18 files, 65 tests. Root: 341 tests, typecheck and lint pass.
+- Verified in a headless browser: entered 40–30 for Pairs Aces on the Results page; the public ladder
+  showed Pairs Aces first with 4 bonus and 10 points on the next load, plus round results/fixtures;
+  `/ladders`, `/draw/:id` and `/tonight` rendered without console errors.
 
 ## Known gaps / TODO register
 

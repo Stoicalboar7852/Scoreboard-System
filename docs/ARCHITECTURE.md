@@ -128,3 +128,24 @@ Clients send `time:ping { clientSentMs }` on connect and every 60 s; the server 
 `time:pong { clientSentMs, serverNowMs }`. The client keeps the median offset of the last five
 samples and renders every countdown from `Date.now() + offset` against `phaseStartedAtMs +
 phaseDurationMs`, so no tick stream is needed and displays agree to within the network jitter.
+
+## Web client (`apps/web`)
+
+```
+src/
+  main.tsx           providers (Query, Theme, Toast), PWA registration, socket connect
+  App.tsx            React Router 7 route table; every route wrapped in ErrorBoundary + Suspense
+  lib/socket.ts      liveSocket(): Socket.IO client, reconnect, time sync, acked emits
+  lib/timeSync.ts    median-of-5 offset estimator (§6.6)
+  lib/offlineQueue.ts ordered, persisted intent queue replayed on reconnect
+  lib/api.ts         fetch wrapper (cookies + device bearer), ApiError
+  store/liveStore.ts Zustand: connection status, offset, session/clocks/courts, warnings, faults
+  hooks/             useCourtLive (join room + select state), useServerNow, useWakeLock, useVersionReload
+  components/        ErrorBoundary, ConnectionBadge, Countdown (rAF), Toaster, UpdatePrompt
+  theme/             ThemeProvider (venue accent overrides → CSS variables)
+  routes/            surfaces by phase: controller, scoreboard, admin, public
+```
+
+Clocks are rendered from `phaseStartedAtMs + phaseDurationMs` against `Date.now() + offsetMs`; the
+client never receives ticks. While disconnected the countdown keeps running from the last state and
+snaps to the server value on the next snapshot.

@@ -90,3 +90,12 @@ implementation and are open for the owner to overturn.
   straight away; otherwise it waits for the clock's next game start.
 - D-024 (Phase 3): Quick games are fixtures with no competition and an explicit `formatId`; they attach
   to that format's clock (created in SINGLE mode if the night has none) and never reach a ladder.
+- D-025 (Phase 4): Theme tokens are Tailwind `@theme` variables so utilities such as `text-court` work,
+  and `<ThemeProvider>` rewrites the same variables on `:root` from `/api/public/settings`; no rebuild
+  is needed when the venue changes an accent colour.
+- D-026 (Phase 4): The whole SPA shares one Socket.IO connection. Rooms are joined per route (court,
+  session, admin) and re-joined on every reconnect; the server answers each join with a snapshot.
+- D-027 (Phase 4): Countdown digits are painted from `requestAnimationFrame` directly into the DOM and
+  only when the text changes, keeping kiosk CPU usage low at 4K.
+- D-028 (Phase 4): Scoreboards reload 3 s after a new build is announced; controllers and admin show a
+  "Reload" toast and never reload on their own (a referee may be mid-tap).

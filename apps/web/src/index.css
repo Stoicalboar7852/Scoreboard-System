@@ -1,14 +1,35 @@
 @import 'tailwindcss';
 
-:root {
+/*
+ * Design tokens (§10). The values here are the defaults from @scoreboard/shared THEME_TOKENS;
+ * <ThemeProvider> overrides them at runtime on :root from the venue's accent settings.
+ * Tailwind utilities (bg-bg, text-court, …) reference these variables, so overrides apply
+ * everywhere without rebuilding.
+ */
+@theme {
   --color-bg: #0b0f14;
   --color-surface: #161b22;
   --color-surface-2: #1f2937;
+  --color-border: #374151;
   --color-text: #f3f4f6;
   --color-text-muted: #9ca3af;
-  --color-accent-court: #fbbf24;
+  --color-court: #fbbf24;
   --color-team: #bfdbfe;
   --color-score: #ffffff;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #f87171;
+  --color-info: #38bdf8;
+  --color-phase-half1: #22c55e;
+  --color-phase-halftime: #f59e0b;
+  --color-phase-half2: #38bdf8;
+  --color-phase-between: #a78bfa;
+  --color-phase-waiting: #94a3b8;
+  --color-phase-timeout: #f87171;
+  --color-phase-final: #ffffff;
+  --color-phase-paused: #f59e0b;
+  --color-phase-pregame: #94a3b8;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 html,
@@ -18,11 +39,48 @@ body,
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  font-family: var(--font-sans);
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kiosk {
+  cursor: none;
+  user-select: none;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.pulse-soft {
+  animation: pulse-soft 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-soft {
+    animation: none;
+  }
 }

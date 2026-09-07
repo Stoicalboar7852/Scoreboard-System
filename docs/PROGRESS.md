@@ -9,7 +9,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 1 | Shared domain package | done | 224 tests, 97% statements / 91% branches coverage |
 | 2 | Database and REST API | done | Prisma schema + init migration, auth, CRUD, ladders, import/export, audit, 30 integration tests |
 | 3 | Real-time layer | done | Socket.IO gateway, LiveService + scheduler, persistence, chronological restart replay, 15 live tests |
-| 4 | Web app shell | not started | |
+| 4 | Web app shell | done | Router, theme tokens, socket client + time sync, live store, offline queue, error boundaries, PWA, wake lock, version reload |
 | 5 | Controller | not started | |
 | 6 | Scoreboard | not started | |
 | 7 | Admin: live control and setup | not started | |
@@ -65,9 +65,31 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   clock) + 3 socket tests (ping/version, validation/auth acks, full controller/scoreboard/admin flow
   with an idempotent retry). Server suite: 10 files, 45 tests. Root: 270 tests, typecheck and lint pass.
 
+### Phase 4 — Web app shell
+- Vite + React 19 + Tailwind 4 with the §10 tokens as CSS variables (`@theme`), overridden at runtime
+  from the venue's accent settings by `<ThemeProvider>`.
+- React Router 7 routes for every surface with a route-level `<ErrorBoundary>` (fault banner + retry /
+  reload, never a blank page) and lazy route modules.
+- `liveSocket()`: one Socket.IO connection per app (device token or admin cookie), Socket.IO
+  auto-reconnect, status connected / reconnecting / offline (after 10 s), `time:ping` burst then every
+  60 s with a 5-sample median offset (`TimeSync`), acked emits with an 8 s timeout, `app:version`.
+- Zustand live store (snapshot + versioned updates), `OfflineQueue` (localStorage-backed, ordered,
+  re-entrancy safe) for Phase 5's controller taps, TanStack Query client with typed `ApiError`.
+- `<Countdown>` writes digits from requestAnimationFrame straight to the DOM (no React renders while a
+  clock runs); `useWakeLock`, `useVersionReload` (scoreboards auto-reload, others prompt via toast),
+  PWA manifest + service worker registration.
+- Verified in the browser: `/scoreboard/:courtId` joins the court, shows offset ≈ 1 ms / RTT 3 ms,
+  renders the live Half 1 countdown after `pnpm --filter @scoreboard/server dev:live go`, and after
+  killing and restarting the server it reconnects and continues from the persisted clock.
+- Web tests: 5 files, 14 tests (time sync median, offline queue, live store versions, connection badge,
+  error boundary, home). Root: typecheck, lint (1 fast-refresh warning), 283 tests pass.
+- Noted: one intermittent failure of `test/sessions.test.ts` ("creates a session…") in a full-suite run
+  that did not reproduce in three reruns; tracked below.
+
 ## Known gaps / TODO register
 
-None yet.
+- T-001: intermittent `apps/server/test/sessions.test.ts` failure seen once in a full run (Phase 4);
+  passes in isolation and on reruns. Investigate if it recurs (suspect cross-file DB timing).
 
 ## Phase logs
 

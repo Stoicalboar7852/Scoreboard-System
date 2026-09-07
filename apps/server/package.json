@@ -15,7 +15,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "dev:live": "tsx scripts/dev-live.ts"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.2",

@@ -1,5 +1,5 @@
 import { Suspense, lazy, type ReactNode } from 'react';
-import { Navigate, Outlet, RouterProvider, createBrowserRouter, useParams } from 'react-router';
+import { Navigate, Outlet, RouterProvider, createBrowserRouter } from 'react-router';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { UpdatePrompt } from './components/UpdatePrompt.js';
 import { Home } from './routes/Home.js';
@@ -7,10 +7,13 @@ import { NotAvailable } from './routes/NotAvailable.js';
 import { NotFound } from './routes/NotFound.js';
 
 const Login = lazy(() => import('./routes/admin/Login.js').then((m) => ({ default: m.Login })));
-const CourtLivePage = lazy(() =>
-  import('./routes/court/CourtLivePage.js').then((m) => ({ default: m.CourtLivePage })),
-);
 
+const ScoreboardIndex = lazy(() =>
+  import('./routes/scoreboard/ScoreboardIndex.js').then((m) => ({ default: m.ScoreboardIndex })),
+);
+const ScoreboardCourt = lazy(() =>
+  import('./routes/scoreboard/ScoreboardCourt.js').then((m) => ({ default: m.ScoreboardCourt })),
+);
 const ControllerIndex = lazy(() =>
   import('./routes/controller/ControllerIndex.js').then((m) => ({ default: m.ControllerIndex })),
 );
@@ -28,11 +31,6 @@ function Boundary({ label, children }: { label: string; children: ReactNode }) {
       <Suspense fallback={<Loading />}>{children}</Suspense>
     </ErrorBoundary>
   );
-}
-
-function ScoreboardRoute() {
-  const { courtId } = useParams();
-  return courtId ? <CourtLivePage /> : <NotAvailable title="Scoreboard court picker" />;
 }
 
 const router = createBrowserRouter([
@@ -72,7 +70,7 @@ const router = createBrowserRouter([
     path: '/scoreboard',
     element: (
       <Boundary label="Scoreboard">
-        <ScoreboardRoute />
+        <ScoreboardIndex />
       </Boundary>
     ),
   },
@@ -80,7 +78,7 @@ const router = createBrowserRouter([
     path: '/scoreboard/:courtId',
     element: (
       <Boundary label="Scoreboard">
-        <ScoreboardRoute />
+        <ScoreboardCourt />
       </Boundary>
     ),
   },

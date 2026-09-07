@@ -107,3 +107,7 @@ implementation and are open for the owner to overturn.
   drops that tap and shows the reason; transport failures keep it queued for the next reconnect.
 - D-032 (Phase 5): The controller shows FINAL (with disabled buttons) only while the completed fixture
   is still the court's current fixture; once the clock moves to the gap the idle screen takes over.
+- D-033 (Phase 6): The horn is synthesised with Web Audio rather than shipped as an mp3, so it works
+  offline and needs no asset; it stays silent until the browser allows audio (gesture or kiosk flag).
+- D-034 (Phase 6): A 2-second press-and-hold anywhere on the scoreboard reopens the court picker, so a
+  kiosk can be re-pointed without a keyboard while the page itself has no visible controls.

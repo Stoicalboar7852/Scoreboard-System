@@ -36,7 +36,7 @@ export function GameClock({
   scale = 1,
 }: Props) {
   const size = (n: number) =>
-    `clamp(${(n * 0.7 * scale).toFixed(2)}rem, ${(n * 3 * scale).toFixed(2)}vw, ${(n * 3.4 * scale).toFixed(2)}rem)`;
+    `max(${(n * 0.7 * scale).toFixed(2)}rem, min(${(n * 3 * scale).toFixed(2)}vw, ${(n * 5.2 * scale).toFixed(2)}vh))`;
   const timeout = court?.timeout ?? {
     active: false,
     startedAtMs: null,

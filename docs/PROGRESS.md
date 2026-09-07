@@ -11,7 +11,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 3 | Real-time layer | done | Socket.IO gateway, LiveService + scheduler, persistence, chronological restart replay, 15 live tests |
 | 4 | Web app shell | done | Router, theme tokens, socket client + time sync, live store, offline queue, error boundaries, PWA, wake lock, version reload |
 | 5 | Controller | done | PIN gate, court picker, exact layout, all phases, time outs, idle rules, optimistic/offline scoring, Playwright smoke |
-| 6 | Scoreboard | not started | |
+| 6 | Scoreboard | done | Kiosk page, one-time picker, proportional 1080p/4K scaling, optional horn, KIOSK-SETUP.md |
 | 7 | Admin: live control and setup | not started | |
 | 8 | Admin: sessions, manual entry, Excel import/export | not started | |
 | 9 | Draw generation and finals | not started | |
@@ -104,6 +104,21 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   picks the court, taps +1 home and +2 away, calls and ends a time out; the scoreboard page follows.
 - `pnpm --filter @scoreboard/server dev:live go|end|reset|status` drives a demo night from the CLI.
 - Verified in the browser at 800×450 (landscape) and 430×900 (portrait).
+
+### Phase 6 — Scoreboard
+- `/scoreboard`: one-time court picker remembered on the PC (`?pick=1` or a 2 s press-and-hold
+  reopens it); `/scoreboard/:courtId`: the shared `CourtDisplay` at TV scale with no interactive
+  elements, cursor hidden, full screen + wake lock (on first gesture outside kiosk mode), auto-reload
+  on new builds, connection dot in the corner, fault banner over the last good state.
+- Sizing is proportional to the viewport (`min(vw, vh)` based), verified identical at 1920×1080 and
+  3840×2160 in the browser.
+- Optional horn (Settings → sound): synthesised with Web Audio at the end of each half / half time;
+  needs a gesture or the Edge autoplay flag documented in `docs/KIOSK-SETUP.md`.
+- Tests: 11 `ScoreboardView` states (every controller state) asserting zero buttons/inputs/links,
+  fault banner, kiosk class; `usePhaseHorn` hook. Web suite: 9 files, 42 tests. Playwright smoke
+  still green (2 tests). Root: 311 tests, typecheck and lint pass.
+- `docs/KIOSK-SETUP.md` written for Windows 10 IoT Enterprise LTSC with Edge (assigned access or
+  startup shortcut flags, power, autologon, audio, re-pointing, troubleshooting).
 
 ## Known gaps / TODO register
 

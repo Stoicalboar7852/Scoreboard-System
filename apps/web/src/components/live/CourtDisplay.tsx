@@ -49,8 +49,9 @@ export function CourtDisplay(props: CourtDisplayProps) {
     scale = 1,
     showCourtName = true,
   } = props;
+  // Proportional to the viewport (min of width/height based sizes) so 1080p and 4K look identical.
   const s = (n: number) =>
-    `clamp(${(n * 0.7 * scale).toFixed(2)}rem, ${(n * 3 * scale).toFixed(2)}vw, ${(n * 3.4 * scale).toFixed(2)}rem)`;
+    `max(${(n * 0.7 * scale).toFixed(2)}rem, min(${(n * 3 * scale).toFixed(2)}vw, ${(n * 5.2 * scale).toFixed(2)}vh))`;
 
   if (!isShowingGame(court, clock)) {
     return (

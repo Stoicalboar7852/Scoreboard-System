@@ -47,7 +47,7 @@ export function IdleScreen({
   const inGap = gapClock?.phase === 'BETWEEN_GAMES' && gapClock.status === 'RUNNING';
   const waiting = clock?.phase === 'WAITING_FOR_LINKED';
   const px = (n: number) =>
-    `clamp(${(n * 0.6 * scale).toFixed(2)}rem, ${(n * 2.2 * scale).toFixed(2)}vw, ${(n * 2.4 * scale).toFixed(2)}rem)`;
+    `max(${(n * 0.6 * scale).toFixed(2)}rem, min(${(n * 2.2 * scale).toFixed(2)}vw, ${(n * 4 * scale).toFixed(2)}vh))`;
 
   if (view.kind === 'NEXT_SOON') {
     const time = startLabel(view.next.scheduledStartMs, timezone);

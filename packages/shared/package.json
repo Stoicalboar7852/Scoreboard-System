@@ -1,0 +1,30 @@
+{
+  "name": "@scoreboard/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure, framework-free domain logic: types, schemas, clock reducer, ladder engine, draw generator",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "echo '@scoreboard/shared is consumed from source; nothing to watch'",
+    "build": "echo '@scoreboard/shared is bundled by its consumers'",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "date-fns": "4.4.0",
+    "date-fns-tz": "3.2.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.11",
+    "fast-check": "4.9.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

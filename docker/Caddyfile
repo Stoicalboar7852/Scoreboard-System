@@ -1,0 +1,11 @@
+# SITE_ADDRESS is the public hostname (e.g. scores.example.com). Caddy obtains and
+# renews a Let's Encrypt certificate automatically. For "localhost" it issues a
+# locally-trusted certificate instead.
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+	reverse_proxy app:3000
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

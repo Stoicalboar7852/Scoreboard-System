@@ -1,0 +1,40 @@
+{
+  "name": "scoreboard-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-court time-based volleyball scoreboard and competition management system",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=22.12.0 <23",
+    "pnpm": ">=10"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --parallel --stream dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "format": "prettier --write .",
+    "test": "pnpm -r --workspace-concurrency=1 test",
+    "test:coverage": "pnpm --filter @scoreboard/shared test:coverage",
+    "test:e2e": "playwright test",
+    "seed": "pnpm --filter @scoreboard/server seed",
+    "db:migrate": "pnpm --filter @scoreboard/server db:migrate",
+    "db:generate": "pnpm --filter @scoreboard/server db:generate",
+    "db:local": "bash scripts/db-local.sh",
+    "clean": "rm -rf apps/*/dist packages/*/dist coverage apps/*/coverage packages/*/coverage"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@playwright/test": "1.63.0",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "6.1.1",
+    "eslint-plugin-react-refresh": "0.4.26",
+    "globals": "16.5.0",
+    "prettier": "3.9.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.69.0"
+  }
+}

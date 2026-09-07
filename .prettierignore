@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+.local
+apps/web/dev-dist
+playwright-report
+test-results
+*.md

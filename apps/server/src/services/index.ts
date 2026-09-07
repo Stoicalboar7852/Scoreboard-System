@@ -10,6 +10,7 @@ import { ExportService } from './export.service.js';
 import { FixturesService } from './fixtures.service.js';
 import { ImportService } from './import.service.js';
 import { LadderService } from './ladder.service.js';
+import { LiveService } from './live/live.service.js';
 import { SettingsService } from './settings.service.js';
 
 export interface Services {
@@ -25,6 +26,7 @@ export interface Services {
   draw: DrawService;
   importer: ImportService;
   exporter: ExportService;
+  live: LiveService;
 }
 
 export function createServices(
@@ -36,23 +38,25 @@ export function createServices(
   const ladders = new LadderService(db);
   const fixtures = new FixturesService(db, ladders, now);
   const clashes = new ClashService(db);
+  const settings = new SettingsService(db, {
+    venueName: config.VENUE_NAME,
+    timezone: config.VENUE_TIMEZONE,
+    controllerPin: config.CONTROLLER_PIN,
+  });
   return {
     config,
     db,
     now,
     audit: new AuditService(db, log),
     auth: new AuthService(db, now, config.SESSION_TTL_HOURS * 3_600_000),
-    settings: new SettingsService(db, {
-      venueName: config.VENUE_NAME,
-      timezone: config.VENUE_TIMEZONE,
-      controllerPin: config.CONTROLLER_PIN,
-    }),
+    settings,
     ladders,
     fixtures,
     clashes,
     draw: new DrawService(db, clashes, ladders),
     importer: new ImportService(db, ladders, now),
     exporter: new ExportService(db, ladders),
+    live: new LiveService({ db, now, log, ladders, fixtures, settings }),
   };
 }
 

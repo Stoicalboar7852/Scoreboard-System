@@ -122,11 +122,13 @@ const VENUE_TABLES = TABLES.filter(
   (t) => !['User', 'AdminSession', 'DeviceToken', 'Settings', 'AuditLog'].includes(t),
 );
 
-/** Clears venue data (courts, formats, seasons, fixtures…) but keeps accounts, devices and settings. */
+/**
+ * Clears venue data (courts, formats, seasons, fixtures…) but keeps accounts, devices and
+ * settings. Uses DELETE in dependency order rather than TRUNCATE … CASCADE so device tokens
+ * (which reference courts) survive.
+ */
 export async function resetVenue(db: PrismaClient = testDb()): Promise<void> {
-  await db.$executeRawUnsafe(
-    `TRUNCATE TABLE ${VENUE_TABLES.map((t) => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`,
-  );
+  for (const table of VENUE_TABLES) await db.$executeRawUnsafe(`DELETE FROM "${table}"`);
 }
 
 /** Creates a minimal venue: two formats, N courts, one season with one competition and teams. */
@@ -204,4 +206,134 @@ export async function seedMiniVenue(
     include: { teams: { orderBy: { name: 'asc' } } },
   });
   return { fours, pairs, courts, season, competition, teams: competition.teams };
+}
+
+/**
+ * A night with two formats on two courts and two slots (linked): Fours on court 1 in both
+ * slots, Pairs on court 2 in both slots. Returns ids for driving the live service.
+ */
+export async function seedLiveNight(
+  db: PrismaClient,
+  options: { date?: string; linked?: boolean } = {},
+) {
+  await resetVenue(db);
+  const fours = await db.gameFormat.create({
+    data: {
+      name: 'Fours',
+      halfSeconds: 1200,
+      halfTimeSeconds: 60,
+      betweenGamesSeconds: 60,
+      timeoutSeconds: 60,
+      colour: '#38BDF8',
+    },
+  });
+  const pairs = await db.gameFormat.create({
+    data: {
+      name: 'Pairs',
+      halfSeconds: 840,
+      halfTimeSeconds: 60,
+      betweenGamesSeconds: 60,
+      timeoutSeconds: 60,
+      colour: '#A78BFA',
+      displayOrder: 1,
+    },
+  });
+  const court1 = await db.court.create({
+    data: {
+      name: 'Court 1',
+      displayOrder: 1,
+      supportedFormats: { create: [{ formatId: fours.id }, { formatId: pairs.id }] },
+    },
+  });
+  const court2 = await db.court.create({
+    data: {
+      name: 'Court 2',
+      displayOrder: 2,
+      supportedFormats: { create: [{ formatId: fours.id }, { formatId: pairs.id }] },
+    },
+  });
+  const season = await db.season.create({
+    data: {
+      name: 'Live Season',
+      startDate: '2026-02-02',
+      regularWeeks: 4,
+      finalsTemplate: { weeks: [], drawResolution: 'HIGHER_SEED' } as object,
+      status: 'PUBLISHED',
+    },
+  });
+  const rule = {
+    kind: 'RESULT_POINTS',
+    win: 6,
+    draw: 4,
+    loss: 2,
+    bye: 6,
+    forfeitWin: 6,
+    forfeitLoss: 0,
+    bonus: { perScorePoints: 10, points: 1, cap: null },
+    tiebreakers: ['LADDER_POINTS', 'WINS', 'POINTS_DIFF', 'POINTS_FOR', 'NAME'],
+  };
+  const foursComp = await db.competition.create({
+    data: {
+      seasonId: season.id,
+      name: 'Fours Comp',
+      nightOfWeek: 1,
+      formatId: fours.id,
+      ladderRule: rule,
+      published: true,
+      teams: { create: ['F1', 'F2', 'F3', 'F4'].map((name) => ({ name, shortName: name })) },
+    },
+    include: { teams: { orderBy: { name: 'asc' } } },
+  });
+  const pairsComp = await db.competition.create({
+    data: {
+      seasonId: season.id,
+      name: 'Pairs Comp',
+      nightOfWeek: 1,
+      formatId: pairs.id,
+      ladderRule: rule,
+      published: true,
+      teams: { create: ['P1', 'P2', 'P3', 'P4'].map((name) => ({ name, shortName: name })) },
+    },
+    include: { teams: { orderBy: { name: 'asc' } } },
+  });
+  const session = await db.session.create({
+    data: {
+      seasonId: season.id,
+      date: options.date ?? '2026-02-02',
+      nightOfWeek: 1,
+      firstSlotTime: '18:30',
+      slotLengthMinutes: 42,
+      slotCount: 2,
+      linkShorterToLonger: options.linked ?? true,
+      published: true,
+    },
+  });
+  const ft = foursComp.teams;
+  const pt = pairsComp.teams;
+  const fx = async (
+    competitionId: string,
+    courtId: string,
+    slotIndex: number,
+    home: { id: string },
+    away: { id: string },
+  ) =>
+    db.fixture.create({
+      data: {
+        seasonId: season.id,
+        competitionId,
+        sessionId: session.id,
+        roundNumber: 1,
+        slotIndex,
+        courtId,
+        homeTeamId: home.id,
+        awayTeamId: away.id,
+      },
+    });
+  const fixtures = {
+    fours0: await fx(foursComp.id, court1.id, 0, ft[0]!, ft[1]!),
+    fours1: await fx(foursComp.id, court1.id, 1, ft[2]!, ft[3]!),
+    pairs0: await fx(pairsComp.id, court2.id, 0, pt[0]!, pt[1]!),
+    pairs1: await fx(pairsComp.id, court2.id, 1, pt[2]!, pt[3]!),
+  };
+  return { fours, pairs, court1, court2, season, foursComp, pairsComp, session, fixtures };
 }

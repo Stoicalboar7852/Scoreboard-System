@@ -105,6 +105,7 @@ model GameFormat {
   courts              CourtFormat[]
   competitions        Competition[]
   clocks              Clock[]
+  fixtures            Fixture[]
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 }
@@ -269,6 +270,9 @@ model Fixture {
   /// Ad-hoc names when no team is linked (quick games) or resolved placeholder labels.
   homeName      String?
   awayName      String?
+  /// Game format for ad-hoc fixtures (competition fixtures use the competition's format).
+  formatId      String?
+  format        GameFormat?    @relation(fields: [formatId], references: [id], onDelete: SetNull)
   stage         FixtureStage   @default(REGULAR)
   finalsKey     String?
   homeRef       Json?

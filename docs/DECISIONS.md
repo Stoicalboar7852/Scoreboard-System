@@ -79,3 +79,14 @@ implementation and are open for the owner to overturn.
   the admin can rename it later.
 - D-019 (Phase 2): The seed prepares "tonight" on any weekday by copying the Wednesday week-1 fixtures into
   a session dated today so the demo can run immediately; those results do count on the Wednesday ladders.
+- D-020 (Phase 3): One in-memory `LiveService` per server process holds live state and serialises
+  commands through a queue. This assumes a single server instance (decision 2, one venue); horizontal
+  scaling would need a shared store, which is out of scope.
+- D-021 (Phase 3): Restart recovery is a chronological replay of missed expiries across all clocks
+  rather than per-clock fast-forward, so linked clocks see each other's historical state correctly.
+- D-022 (Phase 3): Score taps persist to both `CourtLiveState` and the `Fixture` row immediately, so a
+  crash between taps loses nothing and results never depend on the in-memory state.
+- D-023 (Phase 3): Admin "assign fixture" while the court's clock is mid-game marks the fixture LIVE
+  straight away; otherwise it waits for the clock's next game start.
+- D-024 (Phase 3): Quick games are fixtures with no competition and an explicit `formatId`; they attach
+  to that format's clock (created in SINGLE mode if the night has none) and never reach a ladder.

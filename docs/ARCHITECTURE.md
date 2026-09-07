@@ -71,3 +71,60 @@ Authentication: `POST /api/auth/login` sets a signed HTTP-only cookie holding an
 Every request resolves `request.admin` and `request.device`; routes declare `requireAdmin`,
 `requireController` or `requireAdminOrController` pre-handlers. Public routes are unauthenticated,
 rate-limited and read-only.
+
+## Real-time layer
+
+```
+Controller / Scoreboard / Admin (browser)
+        │  Socket.IO (websocket, polling fallback), rooms court:{id} clock:{id} session:{id} admin
+        ▼
+  gateway.ts ── validates payload (shared Zod) ── checks role ── actionId cache ── LiveService command
+        ▲                                                                              │
+        │   court:state / clock:state / session:state / live:warnings                  ▼
+        └──────────────────────────────── EventEmitter ◄──── persist (Prisma) ◄── clockReducer effects
+```
+
+### Sequence: clock start → phase expiry → broadcast
+
+```mermaid
+sequenceDiagram
+    participant A as Admin (browser)
+    participant G as Gateway (Socket.IO)
+    participant L as LiveService
+    participant R as clockReducer (shared)
+    participant DB as PostgreSQL
+    participant S as Scheduler (setTimeout + 1s sweep)
+    participant C as Controllers / Scoreboards
+
+    A->>G: clock:start { actionId, clockId }
+    G->>G: Zod validate, require admin, actionId cache miss
+    G->>L: clockAction(clockId, 'start')
+    L->>R: reduce(state, START{nowMs}, ctx)
+    R-->>L: { state: HALF_1 RUNNING v+1, effects: [PHASE_CHANGED, GAME_STARTED] }
+    L->>DB: upsert Clock; fixtures on this clock → LIVE; upsert CourtLiveState
+    L-->>G: emit clock, emit court
+    G-->>C: clock:state, court:state (rooms)
+    G-->>A: ack { ok: true, state }
+    L->>S: arm timer for phaseStartedAtMs + phaseDurationMs
+
+    Note over S: 20 minutes later (or the sweep notices it is overdue)
+    S->>L: expireClock(clockId)
+    L->>R: reduce(state, EXPIRE{nowMs}, ctx)
+    R-->>L: { state: HALF_TIME RUNNING (anchored to true end), effects: [PHASE_CHANGED] }
+    L->>DB: upsert Clock
+    L-->>G: emit clock
+    G-->>C: clock:state (clients recompute remaining from serverNow + offset)
+    L->>S: re-arm timer
+```
+
+When HALF_2 expires the reducer returns `GAME_ENDED` (LiveService finalises each court's fixture
+with its current scores and invalidates the competition's ladder cache), then either
+`ENTERED_BETWEEN_GAMES` (dependant clocks in WAITING join the same gap) or `BECAME_UNAVAILABLE`
+(dependants continue on their own cadence), and `SLOT_ADVANCED` + `GAME_STARTED` when the gap ends.
+
+### Time synchronisation
+
+Clients send `time:ping { clientSentMs }` on connect and every 60 s; the server answers
+`time:pong { clientSentMs, serverNowMs }`. The client keeps the median offset of the last five
+samples and renders every countdown from `Date.now() + offset` against `phaseStartedAtMs +
+phaseDurationMs`, so no tick stream is needed and displays agree to within the network jitter.

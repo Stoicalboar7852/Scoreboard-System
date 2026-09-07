@@ -11,6 +11,7 @@ import { systemNow, type Now } from './lib/time.js';
 import { authPlugin } from './plugins/auth.js';
 import { securityPlugin } from './plugins/security.js';
 import { createServices, type Services } from './services/index.js';
+import { attachGateway, type AppIo } from './services/live/gateway.js';
 import { registerAuthRoutes } from './routes/auth.routes.js';
 import { registerSettingsRoutes } from './routes/settings.routes.js';
 import { registerCourtRoutes } from './routes/courts.routes.js';
@@ -33,11 +34,14 @@ export interface BuildAppOptions {
   config: AppConfig;
   db?: PrismaClient;
   now?: Now;
+  /** Start the live service (scheduler, restart recovery) when the app is ready. Default true. */
+  startLive?: boolean;
 }
 
 declare module 'fastify' {
   interface FastifyInstance {
     services: Services;
+    io: AppIo;
   }
 }
 
@@ -46,6 +50,7 @@ export async function buildApp({
   config,
   db,
   now = systemNow,
+  startLive = true,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
@@ -132,7 +137,15 @@ export async function buildApp({
     });
   });
 
+  app.decorate('io', attachGateway(app, services));
+  if (startLive) {
+    app.addHook('onReady', async () => {
+      await services.live.start();
+    });
+  }
+
   app.addHook('onClose', async () => {
+    await services.live.stop();
     if (!db) await prisma.$disconnect();
   });
 

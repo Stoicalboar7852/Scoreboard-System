@@ -8,7 +8,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 0 | Scaffold | done | pnpm workspace, Fastify /healthz, Vite placeholder, Docker/Compose/Caddy, local Postgres script |
 | 1 | Shared domain package | done | 224 tests, 97% statements / 91% branches coverage |
 | 2 | Database and REST API | done | Prisma schema + init migration, auth, CRUD, ladders, import/export, audit, 30 integration tests |
-| 3 | Real-time layer | not started | |
+| 3 | Real-time layer | done | Socket.IO gateway, LiveService + scheduler, persistence, chronological restart replay, 15 live tests |
 | 4 | Web app shell | not started | |
 | 5 | Controller | not started | |
 | 6 | Scoreboard | not started | |
@@ -47,6 +47,23 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 - Root: `pnpm typecheck`, `pnpm lint`, `pnpm test` (224 shared + 30 server + 1 web) pass.
 - Verified manually: server boots on the seeded DB; `/healthz` reports database ok; public tonight/ladders,
   login, admin settings, typed 401 and SPA fallback all respond correctly.
+
+### Phase 3 — Real-time layer
+- `LiveService`: server-authoritative clocks and court states; every command runs through a queue,
+  every change is persisted (`Clock`, `CourtLiveState`) before it is emitted. Effects from the shared
+  reducer drive fixture LIVE/COMPLETED transitions, slot assignment, linked-clock notifications.
+- Scheduler: one `setTimeout` per running clock/time-out plus a 1 s safety sweep. Restart recovery
+  replays missed expiries across all clocks in chronological order (so "Pairs wait for Fours" resolves
+  exactly as it would have live), finalising results and assigning slots as it goes.
+- Socket.IO gateway: handshake auth (admin cookie or device token), Zod validation of every payload,
+  acks `{ ok, state } | { ok, error }`, idempotent `actionId` cache (5 min), rooms
+  `court:{id}` / `clock:{id}` / `session:{id}` / `admin` with snapshots on join, `time:ping`/`time:pong`,
+  `app:version` on connect, controller `courtId` verification, heartbeat "last seen" tracking.
+- Tests: 12 fake-timer flows (go live, full AUTO night incl. auto-finalise and next-slot assignment,
+  pause/resume/adjust, linked waiting + joint restart, unlinked cadence, time outs, admin overrides,
+  single mode + advance slot, end night, warnings) + 2 restart-recovery tests (mid-half crash, paused
+  clock) + 3 socket tests (ping/version, validation/auth acks, full controller/scoreboard/admin flow
+  with an idempotent retry). Server suite: 10 files, 45 tests. Root: 270 tests, typecheck and lint pass.
 
 ## Known gaps / TODO register
 

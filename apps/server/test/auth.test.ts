@@ -141,3 +141,33 @@ describe('auth', () => {
     expect(audit.json().length).toBeGreaterThan(0);
   });
 });
+
+describe('admin bootstrap from the environment (D-054)', () => {
+  let ctx: TestContext;
+  beforeAll(async () => {
+    ctx = await createTestContext();
+  });
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  it('creates a missing admin, leaves a matching one alone and rotates a changed password', async () => {
+    const auth = ctx.app.services.auth;
+    expect(await auth.ensureAdmin('ops@example.com', 'first-password-1')).toBe('created');
+    expect(await auth.ensureAdmin('OPS@example.com', 'first-password-1')).toBe('unchanged');
+    expect(await auth.ensureAdmin('ops@example.com', 'second-password-2')).toBe('updated');
+
+    const old = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'ops@example.com', password: 'first-password-1' },
+    });
+    expect(old.statusCode).toBe(401);
+    const fresh = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'ops@example.com', password: 'second-password-2' },
+    });
+    expect(fresh.statusCode).toBe(200);
+  });
+});

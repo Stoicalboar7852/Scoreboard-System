@@ -10,6 +10,7 @@ export type ErrorCode =
   | 'FORBIDDEN'
   | 'RULE_VIOLATION'
   | 'RATE_LIMITED'
+  | 'UPSTREAM'
   | 'INTERNAL';
 
 export class AppError extends Error {
@@ -52,6 +53,12 @@ export class ForbiddenError extends AppError {
 export class RuleViolationError extends AppError {
   constructor(message: string, details?: unknown) {
     super('RULE_VIOLATION', 422, message, details);
+  }
+}
+/** A third-party service (e.g. the Facebook Graph API) failed or rejected the request. */
+export class UpstreamError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super('UPSTREAM', 502, message, details);
   }
 }
 

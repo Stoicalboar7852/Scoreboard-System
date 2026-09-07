@@ -31,6 +31,7 @@ import { registerPublicRoutes } from './routes/public.routes.js';
 import { registerControllerRoutes } from './routes/controller.routes.js';
 import { registerDrawRoutes } from './routes/draw.routes.js';
 import { registerFinalsRoutes } from './routes/finals.routes.js';
+import { registerIntegrationRoutes } from './routes/integrations.routes.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -38,6 +39,8 @@ export interface BuildAppOptions {
   now?: Now;
   /** Start the live service (scheduler, restart recovery) when the app is ready. Default true. */
   startLive?: boolean;
+  /** Outbound HTTP for integrations (Facebook). Tests inject a fake. */
+  fetchImpl?: typeof fetch;
 }
 
 declare module 'fastify' {
@@ -53,6 +56,7 @@ export async function buildApp({
   db,
   now = systemNow,
   startLive = true,
+  fetchImpl,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
@@ -67,7 +71,7 @@ export async function buildApp({
   });
 
   const prisma = db ?? createPrisma(config);
-  const services = createServices(config, prisma, app.log, now);
+  const services = createServices(config, prisma, app.log, now, fetchImpl ? { fetchImpl } : {});
   app.decorate('services', services);
 
   app.setErrorHandler(errorHandler);
@@ -111,6 +115,7 @@ export async function buildApp({
   registerControllerRoutes(app, services);
   registerDrawRoutes(app, services);
   registerFinalsRoutes(app, services);
+  registerIntegrationRoutes(app, services);
 
   // Serve the built SPA whenever the dist folder exists (always in Docker; locally after `pnpm build`).
   const webDist = resolve(process.cwd(), config.WEB_DIST_DIR);

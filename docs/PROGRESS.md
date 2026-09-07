@@ -17,7 +17,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 9 | Draw generation and finals | done | Season wizard, preview/commit with conflict report, regenerate per week, publish, lock ladder + finals with auto-resolution |
 | 10 | Results, ladders, public pages | done | Results editing, adjustments, ladder PNG/CSV/copy link, public /ladders, /ladders/:id, /draw/:id, /tonight |
 | 11 | Hardening | done | Load test 150 clients / 30 courts PASS, network-drop / full-night / a11y Playwright suites, security review tests, Lighthouse, iCloud recovery notes |
-| 12 | Deployment and hand-over | not started | |
+| 12 | Deployment and hand-over | done | DEPLOY.md (cloud + on-prem), README quick start, ARCHITECTURE final, feature-flagged Facebook posting, admin bootstrap on boot |
 
 ### Phase 1 — Shared domain package
 - Modules: domain enums/entities/live-state/inputs (Zod), socket event registry, clock reducer +
@@ -243,11 +243,46 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 - `pnpm typecheck`, `pnpm lint` (0 errors, 7 react-refresh warnings) and `pnpm test`
   (224 shared + 57 server + 65 web = 346 tests) pass.
 
+### Phase 12 — Deployment and hand-over
+- `docs/DEPLOY.md`: topology, prerequisites, ten-minute first deployment with the production
+  environment table, backups (pg_dump cron + restore), upgrade and rollback procedure, on-premises
+  fallback with Caddy's internal CA (`CADDY_TLS="tls internal"`, D-055), Facebook setup, operations
+  table, common issues and a security checklist. `README.md`: clone → running demo night in ten
+  minutes with the exact URLs, logins and clicks. `docs/ARCHITECTURE.md` finalised (live-state
+  ownership and restart recovery, offline behaviour, competition pipeline, deployment topology,
+  integrations).
+- Production bootstrap (D-054): the server ensures the settings row and the admin account from
+  `ADMIN_EMAIL` / `ADMIN_PASSWORD` on every boot and rotates the stored hash when the password
+  changes, so a fresh database needs no demo seed. Test added.
+- Facebook snapshot posting behind `FACEBOOK_ENABLED` (D-053): `FacebookService` (Graph API
+  `POST /{page}/photos`, injectable fetch), `GET /api/integrations` and
+  `POST /api/integrations/facebook/ladder/:competitionId` (admin-only, PNG data URL validated by
+  signature, default caption with the public ladder URL, audited, 5/min). Admin → Ladders shows
+  **Post to Facebook** only when the server reports the feature enabled; 8 integration tests cover
+  disabled / misconfigured / enabled, custom caption, non-PNG input, Graph API rejection mapped to
+  a 502 `UPSTREAM` error without leaking the token, and the admin-only guard.
+- Housekeeping: Prettier had flagged `e2e/helpers.ts` in Phase 11 but the failure was hidden by
+  the grep used to summarise the lint output; both helper files are formatted and `pnpm lint` now
+  exits 0 (checked by exit code). Demo database reseeded with `SEED_RESET=true pnpm seed`
+  (6 courts, Fours/Pairs, 3 + 2 competitions, two 10-week draws, tonight's session).
+- No `TODO` / `FIXME` markers remain in the code (`grep` over apps, packages, e2e, scripts, docs).
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` (224 shared + 66 server + 65 web = 355 tests) pass;
+  Playwright 5/5 (Phase 11 run on the same web build).
+
 ## Known gaps / TODO register
 
 - T-001 (resolved in Phase 8): the intermittent `sessions.test.ts` failure was nondeterministic ordering
   of fixtures created in one transaction (identical `createdAt`). Session fixtures are now ordered by
   slot, court display order, creation time and id; three consecutive full runs pass.
+- G-001 (open, environment): Docker is not installed on the development Mac, so the Dockerfile,
+  Compose stack and Caddyfile were written against the documented images and reviewed but not
+  executed here; the first `docker compose up -d --build` on a real host is the acceptance test
+  (`docs/DEPLOY.md` §3).
+- G-002 (open, product): the Facebook integration is tested against a fake Graph API only; it needs
+  a real Page access token to be exercised end-to-end (`docs/DEPLOY.md` §8).
+- G-003 (open, performance): Lighthouse mobile performance is 72–86 because the entry chunk is
+  ~390 KB over a simulated slow 4G link; the kiosk profile (desktop, LAN, service-worker precache)
+  scores 99. Splitting vendor chunks further would trim first loads on phones.
 
 ## Phase logs
 

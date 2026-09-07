@@ -173,6 +173,21 @@ export interface FinalsStatus {
     date: string | null;
   }>;
 }
+export interface Integrations {
+  facebook: {
+    /** Flag on and page id + token present. */
+    enabled: boolean;
+    /** Flag on but a page id or token is missing. */
+    misconfigured: boolean;
+    pageId: string | null;
+  };
+}
+
+export interface FacebookPostResult {
+  postId: string;
+  url: string;
+}
+
 export interface LadderResult {
   competitionId: string;
   competitionName: string;
@@ -303,6 +318,14 @@ export const adminApi = {
   },
   ladders: {
     get: (competitionId: string) => api<LadderResult>(`/api/ladders/${competitionId}`),
+    postToFacebook: (competitionId: string, body: { imageDataUrl: string; caption?: string }) =>
+      api<FacebookPostResult>(`/api/integrations/facebook/ladder/${competitionId}`, {
+        method: 'POST',
+        body,
+      }),
+  },
+  integrations: {
+    get: () => api<Integrations>('/api/integrations'),
   },
   draw: {
     preview: (body: {

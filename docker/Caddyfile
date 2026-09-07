@@ -2,6 +2,10 @@
 # renews a Let's Encrypt certificate automatically. For "localhost" it issues a
 # locally-trusted certificate instead.
 {$SITE_ADDRESS:localhost} {
+	# CADDY_TLS is empty for public hosts (automatic Let's Encrypt). Set it to "tls internal" for an
+	# on-premises server with a LAN hostname (see docs/DEPLOY.md §7) and install Caddy's root CA on
+	# every kiosk and tablet.
+	{$CADDY_TLS}
 	encode zstd gzip
 	reverse_proxy app:3000
 	header {

@@ -59,13 +59,28 @@ export async function resetDb(db: PrismaClient = testDb()): Promise<void> {
 
 /** Builds an app on the test DB with a seeded admin, settings (PIN 2468) and one device token. */
 export async function createTestContext(
-  options: { seedAdmin?: boolean; startMs?: number } = {},
+  options: {
+    seedAdmin?: boolean;
+    startMs?: number;
+    /** Overrides applied on top of the test environment (e.g. feature flags). */
+    configOverrides?: Partial<AppConfig>;
+    /** Fake outbound fetch for integration tests. */
+    fetchImpl?: typeof fetch;
+  } = {},
 ): Promise<TestContext> {
   const db = testDb();
   await resetDb(db);
-  const config = loadConfig({ ...process.env, NODE_ENV: 'test' });
+  const config = {
+    ...loadConfig({ ...process.env, NODE_ENV: 'test' }),
+    ...options.configOverrides,
+  };
   const clock = { nowMs: options.startMs ?? Date.UTC(2026, 1, 2, 8, 0, 0) };
-  const app = await buildApp({ config, db, now: () => clock.nowMs });
+  const app = await buildApp({
+    config,
+    db,
+    now: () => clock.nowMs,
+    ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+  });
   await app.ready();
 
   const admin = { email: config.ADMIN_EMAIL, password: config.ADMIN_PASSWORD, cookie: '' };

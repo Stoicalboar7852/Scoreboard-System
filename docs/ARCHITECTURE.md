@@ -1,7 +1,5 @@
 # Architecture
 
-(Populated progressively; final version includes the clock sequence diagram.)
-
 ## Overview
 
 One cloud-hosted Node.js server (Fastify 5 REST + Socket.IO 4 real-time + Prisma 6 on
@@ -59,7 +57,9 @@ src/
   errors.ts         AppError hierarchy + central error handler (never leaks stacks)
   plugins/          security (cookie, CORS, helmet, rate-limit), auth (request.admin / request.device)
   services/         auth, settings, ladder (cached), fixtures (results, finals), sessions (grid + validation),
-                    clash (explicit + roster-derived), draw (generator I/O), import, export
+                    clash (explicit + roster-derived), draw (generator I/O), import, export, finals,
+                    facebook (feature-flagged Graph API upload), live/ (LiveService, scheduler, gateway)
+  scripts/          build.mjs (esbuild bundle), dev-live.ts, make-template.ts, load-test.ts
   routes/           one file per resource; every body/query parsed with the shared Zod schemas
   mappers/          Prisma rows → shared entity shapes (dates → epoch ms)
 prisma/             schema.prisma, migrations/, seed.ts
@@ -149,3 +149,59 @@ src/
 Clocks are rendered from `phaseStartedAtMs + phaseDurationMs` against `Date.now() + offsetMs`; the
 client never receives ticks. While disconnected the countdown keeps running from the last state and
 snaps to the server value on the next snapshot.
+
+### Live state ownership and restart recovery
+
+`LiveService` is the only writer of `Clock` and `CourtLiveState`. Every command (admin clock
+action, referee tap, session go-live) runs through one in-process queue, is applied with the shared
+reducer, persisted, and only then emitted. On boot the service loads every running clock, sorts the
+expiries that were missed while the process was down and replays them in chronological order across
+all clocks, so a linked pair that should have waited for each other resolves exactly as it would
+have live, fixtures are finalised with the scores that were on the board, and the next slot is
+assigned. Clients simply receive the resulting snapshots when they reconnect.
+
+### Offline behaviour
+
+The controller keeps working without a connection: taps are applied optimistically to a pending
+score overlay and appended to a persisted, ordered intent queue (`localStorage`). On reconnect the
+socket re-joins the court room, the queue replays in order with the original `actionId`s (the server
+de-duplicates for five minutes), and the snapshot that follows replaces the overlay. Countdowns keep
+running from the last known phase end because they are derived from timestamps, not ticks; the
+browser `offline`/`online` events drop and re-open the socket immediately so the connection badge
+never sticks.
+
+## Competition pipeline
+
+```
+Excel / manual grid ──► clash validator ──► Session (slots × courts) ──► go live ──► results
+                                                                                     │
+Season + competitions ──► draw generator ──► sessions for every week ──► ladders ◄───┘
+                                                                          │
+                                                   lock ladder ──► finals resolver ──► finals fixtures
+```
+
+- The draw generator (`packages/shared/draw`) is deterministic for a given seed and produces a
+  structured conflict report instead of silently dropping fixtures; admins regenerate one week at
+  a time when courts or teams change.
+- Ladders are computed on demand from completed fixtures plus audited adjustments with a
+  per-competition rule (points for win/draw/loss/bye/forfeit, bonus points per N scored, ordered
+  tie-breakers such as wins and points difference) and cached until a result changes.
+- Finals are a template on the season (semi finals 1 v 4 and 2 v 3, winners → grand final by
+  default); seeds are resolved from
+  the locked ladder, re-resolved on every result edit, and placeholders become real teams as
+  earlier finals complete.
+
+## Deployment topology
+
+`Caddy (TLS, HTTP/3) → app (Fastify, static SPA, Socket.IO) → PostgreSQL`, all in one Docker
+Compose stack (`docs/DEPLOY.md`). The image is multi-stage: install, build web + server, then a
+slim runtime that applies migrations, ensures settings and the admin account from the environment,
+and starts. The same stack runs on a venue PC with Caddy's internal CA for an on-premises fallback.
+
+## Integrations
+
+The Facebook Page upload is the only outbound integration. It is off unless `FACEBOOK_ENABLED`,
+`FACEBOOK_PAGE_ID` and `FACEBOOK_PAGE_ACCESS_TOKEN` are all set; the admin UI asks
+`GET /api/integrations` before showing the button, and the server (never the browser) posts the
+PNG with the token in the multipart body. `FacebookService` takes an injectable `fetch`, so the
+integration tests run against a fake Graph API.

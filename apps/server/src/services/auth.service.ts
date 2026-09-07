@@ -145,13 +145,29 @@ export class AuthService {
     return result.count;
   }
 
-  /** Ensures the seeded admin from the environment exists (idempotent). */
-  async ensureAdmin(email: string, password: string, name = 'Admin'): Promise<void> {
+  /**
+   * Ensures the admin from the environment exists and can log in with the configured password
+   * (idempotent, runs on every boot). The environment is the single source of truth for this
+   * account: changing ADMIN_PASSWORD in `.env` and restarting rotates it (D-054).
+   */
+  async ensureAdmin(
+    email: string,
+    password: string,
+    name = 'Admin',
+  ): Promise<'created' | 'updated' | 'unchanged'> {
     const normalised = email.toLowerCase();
     const existing = await this.db.user.findUnique({ where: { email: normalised } });
-    if (existing) return;
-    await this.db.user.create({
-      data: { email: normalised, name, passwordHash: await hashPassword(password) },
+    if (!existing) {
+      await this.db.user.create({
+        data: { email: normalised, name, passwordHash: await hashPassword(password) },
+      });
+      return 'created';
+    }
+    if (await verifyPassword(existing.passwordHash, password)) return 'unchanged';
+    await this.db.user.update({
+      where: { id: existing.id },
+      data: { passwordHash: await hashPassword(password) },
     });
+    return 'updated';
   }
 }

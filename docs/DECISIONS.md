@@ -158,3 +158,15 @@ implementation and are open for the owner to overturn.
   `new Function()` on first parse, which the strict CSP blocks and Chrome logs as an issue (Lighthouse
   best-practices 96 → 100); `@scoreboard/shared` is marked `sideEffects: false` so bundlers can drop
   domain modules a page never imports (the entry chunk fell from 492 KB to 390 KB).
+- D-053 (Phase 12): Facebook posting is a server-side upload of the same PNG the admin already
+  renders client-side (`POST /api/integrations/facebook/ladder/:id`, admin-only, 5/min), so the
+  page access token never reaches a browser; the Graph API call sends the token in the multipart
+  body, not the URL, and every post is audited with the post id but never the token. The button only
+  appears when `GET /api/integrations` reports the feature enabled.
+- D-054 (Phase 12): The server ensures the settings row and the admin account from `ADMIN_EMAIL` /
+  `ADMIN_PASSWORD` on every boot, updating the stored hash when the configured password no longer
+  verifies. The environment is therefore the single source of truth for the office login (there is
+  no in-app password change), and a fresh production database is usable without the demo seed.
+- D-055 (Phase 12): On-premises deployments reuse the same Compose stack; `CADDY_TLS="tls internal"`
+  switches Caddy from Let's Encrypt to its internal CA because kiosks need a secure context for the
+  service worker, wake lock and PWA install even on a LAN with no public DNS.

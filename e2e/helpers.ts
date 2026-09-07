@@ -102,15 +102,13 @@ export async function startTonight(request: APIRequestContext, baseURL: string) 
   const grid = await request.put(`${baseURL}/api/sessions/${sessionId}/grid`, {
     data: {
       slotCount: 1,
-      fixtures: pairs
-        .slice(0, Math.min(2, courts.length))
-        .map(([home, away], i) => ({
-          competitionId: comp.id,
-          homeTeamId: home,
-          awayTeamId: away,
-          slotIndex: 0,
-          courtId: courts[i]!.id,
-        })),
+      fixtures: pairs.slice(0, Math.min(2, courts.length)).map(([home, away], i) => ({
+        competitionId: comp.id,
+        homeTeamId: home,
+        awayTeamId: away,
+        slotIndex: 0,
+        courtId: courts[i]!.id,
+      })),
     },
     headers,
   });

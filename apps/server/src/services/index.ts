@@ -7,6 +7,7 @@ import { AuthService } from './auth.service.js';
 import { ClashService } from './clash.service.js';
 import { DrawService } from './draw.service.js';
 import { ExportService } from './export.service.js';
+import { FacebookService } from './facebook.service.js';
 import { FinalsService } from './finals.service.js';
 import { FixturesService } from './fixtures.service.js';
 import { ImportService } from './import.service.js';
@@ -29,6 +30,12 @@ export interface Services {
   exporter: ExportService;
   live: LiveService;
   finals: FinalsService;
+  facebook: FacebookService;
+}
+
+export interface ServiceDeps {
+  /** Outbound HTTP used by integrations; tests inject a fake. */
+  fetchImpl?: typeof fetch;
 }
 
 export function createServices(
@@ -36,6 +43,7 @@ export function createServices(
   db: PrismaClient,
   log: FastifyBaseLogger,
   now: Now = systemNow,
+  deps: ServiceDeps = {},
 ): Services {
   const ladders = new LadderService(db);
   const fixtures = new FixturesService(db, ladders, now);
@@ -60,6 +68,14 @@ export function createServices(
     exporter: new ExportService(db, ladders),
     live: new LiveService({ db, now, log, ladders, fixtures, settings }),
     finals: new FinalsService(db, ladders, clashes, fixtures),
+    facebook: new FacebookService(
+      {
+        enabled: config.FACEBOOK_ENABLED,
+        pageId: config.FACEBOOK_PAGE_ID,
+        accessToken: config.FACEBOOK_PAGE_ACCESS_TOKEN,
+      },
+      deps.fetchImpl ?? globalThis.fetch,
+    ),
   };
 }
 

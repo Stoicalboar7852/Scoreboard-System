@@ -45,6 +45,7 @@ services:
       - '443:443/udp'
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+      CADDY_TLS: ${CADDY_TLS:-}
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

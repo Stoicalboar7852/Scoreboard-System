@@ -38,6 +38,11 @@ export function Ladders() {
     queryFn: () => adminApi.adjustments.list(competitionId),
     enabled: competitionId !== '',
   });
+  const integrations = useQuery({
+    queryKey: ['integrations'],
+    queryFn: () => adminApi.integrations.get(),
+    staleTime: 5 * 60_000,
+  });
   const { toast } = useToast();
   const snapshotRef = useRef<HTMLDivElement>(null);
   const [teamId, setTeamId] = useState('');
@@ -78,11 +83,15 @@ export function Ladders() {
       toast(publicUrl, 'info');
     }
   };
-  const snapshot = async () => {
+  const renderSnapshot = async (): Promise<string | null> => {
     const node = snapshotRef.current;
-    if (!node) return;
+    if (!node) return null;
+    return toPng(node, { backgroundColor: '#0B0F14', pixelRatio: 2 });
+  };
+  const snapshot = async () => {
     try {
-      const dataUrl = await toPng(node, { backgroundColor: '#0B0F14', pixelRatio: 2 });
+      const dataUrl = await renderSnapshot();
+      if (!dataUrl) return;
       const link = document.createElement('a');
       link.href = dataUrl;
       link.download = `ladder-${(competition?.name ?? 'competition').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
@@ -91,6 +100,17 @@ export function Ladders() {
       toast(errorMessage(err), 'error');
     }
   };
+  // Feature-flagged (§7.7): the server uploads the same PNG to the Facebook Page; the token never
+  // reaches the browser and the button only exists when the server reports the feature enabled.
+  const postToFacebook = useMutation({
+    mutationFn: async () => {
+      const imageDataUrl = await renderSnapshot();
+      if (!imageDataUrl) throw new Error('Nothing to post yet');
+      return adminApi.ladders.postToFacebook(competitionId, { imageDataUrl });
+    },
+    onSuccess: (result) => toast(`Posted to Facebook: ${result.url}`, 'success'),
+    onError: (err) => toast(errorMessage(err), 'error'),
+  });
 
   return (
     <div>
@@ -130,6 +150,17 @@ export function Ladders() {
             >
               Copy public link
             </Button>
+            {integrations.data?.facebook.enabled && (
+              <Button
+                onClick={() => {
+                  if (window.confirm('Post the current ladder snapshot to the Facebook Page?'))
+                    postToFacebook.mutate();
+                }}
+                disabled={!competitionId || postToFacebook.isPending}
+              >
+                {postToFacebook.isPending ? 'Posting…' : 'Post to Facebook'}
+              </Button>
+            )}
             {competition && (
               <Link to={`/admin/seasons/${competition.seasonId}/draw`}>
                 <Button variant="primary">Lock ladder &amp; finals</Button>

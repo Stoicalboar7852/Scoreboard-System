@@ -11,6 +11,13 @@ const CourtLivePage = lazy(() =>
   import('./routes/court/CourtLivePage.js').then((m) => ({ default: m.CourtLivePage })),
 );
 
+const ControllerIndex = lazy(() =>
+  import('./routes/controller/ControllerIndex.js').then((m) => ({ default: m.ControllerIndex })),
+);
+const ControllerCourt = lazy(() =>
+  import('./routes/controller/ControllerCourt.js').then((m) => ({ default: m.ControllerCourt })),
+);
+
 function Loading() {
   return <div className="p-8 text-text-muted">Loading…</div>;
 }
@@ -26,11 +33,6 @@ function Boundary({ label, children }: { label: string; children: ReactNode }) {
 function ScoreboardRoute() {
   const { courtId } = useParams();
   return courtId ? <CourtLivePage /> : <NotAvailable title="Scoreboard court picker" />;
-}
-
-function ControllerRoute() {
-  const { courtId } = useParams();
-  return <NotAvailable title={courtId ? 'Controller' : 'Controller court picker'} />;
 }
 
 const router = createBrowserRouter([
@@ -54,7 +56,7 @@ const router = createBrowserRouter([
     path: '/controller',
     element: (
       <Boundary label="Controller">
-        <ControllerRoute />
+        <ControllerIndex />
       </Boundary>
     ),
   },
@@ -62,7 +64,7 @@ const router = createBrowserRouter([
     path: '/controller/:courtId',
     element: (
       <Boundary label="Controller">
-        <ControllerRoute />
+        <ControllerCourt />
       </Boundary>
     ),
   },

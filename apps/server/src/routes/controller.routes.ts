@@ -19,6 +19,7 @@ export function registerControllerRoutes(app: FastifyInstance, s: Services): voi
       courts: courts.map(mapCourt),
       formats: formats.map(mapFormat),
       settings: {
+        hasControllerPin: settings.hasControllerPin,
         venueName: settings.venueName,
         timezone: settings.timezone,
         nextGameWindowMinutes: settings.nextGameWindowMinutes,

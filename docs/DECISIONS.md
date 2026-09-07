@@ -99,3 +99,11 @@ implementation and are open for the owner to overturn.
   only when the text changes, keeping kiosk CPU usage low at 4K.
 - D-028 (Phase 4): Scoreboards reload 3 s after a new build is announced; controllers and admin show a
   "Reload" toast and never reload on their own (a referee may be mid-tap).
+- D-029 (Phase 5): Switching courts from the gear always asks for the PIN when one is configured (the
+  bootstrap says whether one exists); when no PIN is set the picker opens directly.
+- D-030 (Phase 5): Score taps within 220 ms of the previous tap on the same button are ignored as
+  double taps; the Playwright test spaces its taps accordingly.
+- D-031 (Phase 5): A definitive server rejection of a queued tap (rule violation, auth, validation)
+  drops that tap and shows the reason; transport failures keep it queued for the next reconnect.
+- D-032 (Phase 5): The controller shows FINAL (with disabled buttons) only while the completed fixture
+  is still the court's current fixture; once the clock moves to the gap the idle screen takes over.

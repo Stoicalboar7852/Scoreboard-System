@@ -10,7 +10,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 2 | Database and REST API | done | Prisma schema + init migration, auth, CRUD, ladders, import/export, audit, 30 integration tests |
 | 3 | Real-time layer | done | Socket.IO gateway, LiveService + scheduler, persistence, chronological restart replay, 15 live tests |
 | 4 | Web app shell | done | Router, theme tokens, socket client + time sync, live store, offline queue, error boundaries, PWA, wake lock, version reload |
-| 5 | Controller | not started | |
+| 5 | Controller | done | PIN gate, court picker, exact layout, all phases, time outs, idle rules, optimistic/offline scoring, Playwright smoke |
 | 6 | Scoreboard | not started | |
 | 7 | Admin: live control and setup | not started | |
 | 8 | Admin: sessions, manual entry, Excel import/export | not started | |
@@ -85,6 +85,25 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   error boundary, home). Root: typecheck, lint (1 fast-refresh warning), 283 tests pass.
 - Noted: one intermittent failure of `test/sessions.test.ts` ("creates a session…") in a full-suite run
   that did not reproduce in three reruns; tracked below.
+
+### Phase 5 — Controller
+- `/controller`: PIN keypad → device token (stored on the device), court grid, remembered court redirect;
+  `/controller/:courtId`: the §7.1 layout (court name gold, team names above scores, phase label above
+  the clock, +/− pairs ≥72 px, centred TIME OUT / END TIME OUT), landscape and portrait grids, gear →
+  PIN → switch court, footer with connection • competition • next game and time.
+- Shared live components (`components/live`): `CourtDisplay` (used by controller and the court page,
+  and by the Phase 6 scoreboard), `GameClock` (phase colours, time-out countdown in red, FINAL panel,
+  paused pulse), `IdleScreen` (decision 5 rules with the between-games / waiting countdown).
+- Scoring: optimistic display = server score + unacked taps; taps are persisted in an `OfflineQueue`
+  per court, replayed in order on reconnect, and reconciled against the server's court state.
+  Definitive rejections (rule/auth) drop the tap and show the message. 220 ms double-tap guard.
+- Tests: 13 `ControllerView` phase tests (Half 1/time/2, paused, time out, final, between games,
+  waiting for linked, pre-game inside window, idle later, no more games, queued/error, gear) +
+  pending-score reducer. Web suite: 7 files, 28 tests.
+- Playwright smoke (`pnpm test:e2e`, own `scoreboard_e2e` DB seeded per run): referee enters the PIN,
+  picks the court, taps +1 home and +2 away, calls and ends a time out; the scoreboard page follows.
+- `pnpm --filter @scoreboard/server dev:live go|end|reset|status` drives a demo night from the CLI.
+- Verified in the browser at 800×450 (landscape) and 430×900 (portrait).
 
 ## Known gaps / TODO register
 

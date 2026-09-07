@@ -41,7 +41,7 @@ start_cluster() {
     pg_ctl -D "$DATA_DIR" -l "$LOG_FILE" -w start >/dev/null
     echo "[db-local] started on port $PORT (log: $LOG_FILE)"
   fi
-  for db in scoreboard scoreboard_test; do
+  for db in scoreboard scoreboard_test scoreboard_e2e; do
     if ! psql -h "$DATA_DIR" -p "$PORT" -U "$DB_USER" -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" postgres | grep -q 1; then
       createdb -h "$DATA_DIR" -p "$PORT" -U "$DB_USER" "$db"
       echo "[db-local] created database $db"

@@ -17,8 +17,9 @@ export function describeIdle(
   windowMs: number,
 ): IdleView {
   if (court.current && court.current.status === 'LIVE') return { kind: 'LIVE' };
+  // An assigned-but-not-started fixture is the next game on this court; otherwise the queued one.
   const next =
-    court.next ?? (court.current && court.current.status === 'SCHEDULED' ? court.current : null);
+    (court.current && court.current.status === 'SCHEDULED' ? court.current : null) ?? court.next;
   if (!next) return { kind: 'NO_MORE_GAMES' };
   const startsInMs = next.scheduledStartMs === null ? null : next.scheduledStartMs - nowMs;
   if (startsInMs === null || startsInMs <= windowMs) return { kind: 'NEXT_SOON', next, startsInMs };

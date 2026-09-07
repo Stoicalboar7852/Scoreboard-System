@@ -3,16 +3,48 @@
  *   pnpm --filter @scoreboard/server dev:live status
  *   pnpm --filter @scoreboard/server dev:live go       # go live with today's session and start every clock
  *   pnpm --filter @scoreboard/server dev:live end      # end the live session
+ *   pnpm --filter @scoreboard/server dev:live reset    # reopen today's session (fixtures back to scheduled)
  * Uses ADMIN_EMAIL / ADMIN_PASSWORD from .env against http://localhost:PORT.
  */
+import { formatInTimeZone } from 'date-fns-tz';
 import { io } from 'socket.io-client';
 import { loadConfig } from '../src/config.js';
+import { createPrisma } from '../src/db/prisma.js';
 
 const config = loadConfig();
 const base = process.env.DEV_LIVE_URL ?? `http://localhost:${config.PORT}`;
 const command = process.argv[2] ?? 'status';
 
+/** Puts today's session back to PLANNED with fresh fixtures so a demo night can be rerun. */
+async function resetToday(): Promise<void> {
+  const db = createPrisma(config);
+  try {
+    const today = formatInTimeZone(new Date(), config.VENUE_TIMEZONE, 'yyyy-MM-dd');
+    const session = await db.session.findFirst({ where: { date: today } });
+    if (!session) throw new Error(`no session dated ${today}; run pnpm seed`);
+    await db.$transaction([
+      db.courtLiveState.deleteMany({ where: { sessionId: session.id } }),
+      db.clock.deleteMany({ where: { sessionId: session.id } }),
+      db.fixture.updateMany({
+        where: { sessionId: session.id, status: { in: ['LIVE', 'COMPLETED'] } },
+        data: { status: 'SCHEDULED', homeScore: 0, awayScore: 0, completedAt: null },
+      }),
+      db.fixture.deleteMany({ where: { sessionId: session.id, competitionId: null } }),
+      db.session.update({ where: { id: session.id }, data: { status: 'PLANNED' } }),
+    ]);
+    console.log(
+      `reset session ${today} to PLANNED (restart the server so it drops its in-memory state)`,
+    );
+  } finally {
+    await db.$disconnect();
+  }
+}
+
 async function main(): Promise<void> {
+  if (command === 'reset') {
+    await resetToday();
+    return;
+  }
   const login = await fetch(`${base}/api/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

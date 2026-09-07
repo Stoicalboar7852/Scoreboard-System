@@ -1,11 +1,6 @@
 import { type Prisma } from '@prisma/client';
 import { fromZonedTime } from 'date-fns-tz';
-import {
-  formatSlotMinutes,
-  parseTimeOfDay,
-  type ClockDurations,
-  type FixtureDisplay,
-} from '@scoreboard/shared';
+import { parseTimeOfDay, type ClockDurations, type FixtureDisplay } from '@scoreboard/shared';
 
 export const liveFixtureInclude = {
   competition: { include: { format: true } },
@@ -83,10 +78,21 @@ export function durationsOf(format: FormatRow): ClockDurations {
   };
 }
 
-/** The longest format sets the slot cadence; shorter ones wait for it when linked. */
+/** Total seconds a game occupies (two halves, half time and the gap). */
+export function formatGameSeconds(
+  format: Pick<FormatRow, 'halfSeconds' | 'halfTimeSeconds' | 'betweenGamesSeconds'>,
+): number {
+  return format.halfSeconds * 2 + format.halfTimeSeconds + format.betweenGamesSeconds;
+}
+
+/**
+ * The longest format sets the slot cadence; shorter ones wait for it when linked. Compared in
+ * seconds (not rounded slot minutes) so two formats that round to the same minute still link
+ * the shorter to the longer.
+ */
 export function longestFormat(formats: FormatRow[]): FormatRow | null {
   return formats.reduce<FormatRow | null>(
-    (best, f) => (best === null || formatSlotMinutes(f) > formatSlotMinutes(best) ? f : best),
+    (best, f) => (best === null || formatGameSeconds(f) > formatGameSeconds(best) ? f : best),
     null,
   );
 }

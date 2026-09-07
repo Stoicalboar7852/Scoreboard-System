@@ -119,7 +119,10 @@ export async function buildApp({
     await app.register(fastifyStatic, {
       root: webDist,
       prefix: '/',
-      wildcard: false,
+      // Wildcard mode resolves files on every request. The per-file mode (`wildcard: false`)
+      // snapshots the directory at boot, so a `pnpm build` while the server runs would leave the
+      // new hashed assets unroutable and the SPA fallback would answer them with index.html.
+      wildcard: true,
       setHeaders: (res, path) => {
         if (/\/(sw\.js|index\.html|manifest\.webmanifest)$/.test(path))
           res.setHeader('Cache-Control', 'no-cache');
@@ -133,7 +136,11 @@ export async function buildApp({
       request.url.startsWith('/api/') ||
       request.url.startsWith('/socket.io') ||
       request.url === '/healthz';
-    if (serveWeb && !isApi && request.method === 'GET') {
+    // Only extension-less paths are SPA routes; a missing `/assets/x.js` must be a real 404 so the
+    // browser reports a failed module load instead of a MIME-type error on an HTML body.
+    const pathname = request.url.split('?')[0] ?? '';
+    const looksLikeFile = /\.[a-z0-9]+$/i.test(pathname);
+    if (serveWeb && !isApi && !looksLikeFile && request.method === 'GET') {
       return reply.type('text/html').header('Cache-Control', 'no-cache').sendFile('index.html');
     }
     return reply.status(404).send({

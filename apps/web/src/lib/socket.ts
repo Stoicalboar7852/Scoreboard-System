@@ -77,8 +77,17 @@ class LiveSocket {
     });
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => this.socket.connect());
-      window.addEventListener('offline', () => store.getState().setStatus('offline'));
+      // The browser knows about network changes long before the transport's ping timeout does:
+      // drop the dead connection at once and reconnect the moment the network is back.
+      window.addEventListener('offline', () => {
+        store.getState().setStatus('offline');
+        this.socket.disconnect();
+      });
+      window.addEventListener('online', () => {
+        if (this.socket.connected) this.socket.disconnect();
+        store.getState().setStatus('reconnecting');
+        this.socket.connect();
+      });
     }
   }
 

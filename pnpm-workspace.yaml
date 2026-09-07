@@ -2,6 +2,10 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+# The virtual store lives in a .nosync folder so iCloud Drive never syncs or evicts it
+# when the project sits inside a synced folder (harmless elsewhere).
+virtualStoreDir: .pnpm.nosync
+
 # Packages allowed to run install/postinstall scripts (native builds, engine downloads).
 allowBuilds:
   '@prisma/client': true

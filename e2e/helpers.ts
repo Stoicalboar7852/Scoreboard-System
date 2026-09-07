@@ -54,17 +54,67 @@ export async function adminSocket(baseURL: string, cookie: string) {
   };
 }
 
-/** Puts a court live: ends any live session, goes live with today's, starts every clock. */
+let sessionSeq = 0;
+
+/**
+ * Creates a fresh session (unique date) with one fixture per court for the first seeded
+ * competition, ends any live session, goes live and starts every clock. Each test gets its
+ * own night so tests never depend on the seeded "tonight" session.
+ */
 export async function startTonight(request: APIRequestContext, baseURL: string) {
   const cookie = await adminCookie(request, baseURL);
   const admin = await adminSocket(baseURL, cookie);
   const before = await admin.snapshot();
   if (before.session) await admin.emit('session:end', { sessionId: before.session.sessionId });
-  const today = (await (
-    await request.get(`${baseURL}/api/sessions/today`, { headers: { cookie } })
-  ).json()) as { date: string; sessions: Array<{ id: string }> };
-  const sessionId = today.sessions[0]?.id;
-  if (!sessionId) throw new Error(`no seeded session for ${today.date}`);
+  const headers = { cookie };
+  const competitions = (await (
+    await request.get(`${baseURL}/api/competitions`, { headers })
+  ).json()) as Array<{ id: string; teams: Array<{ id: string }> }>;
+  const comp = competitions.find((c) => c.teams.length >= 4);
+  if (!comp) throw new Error('seeded competition with at least 4 teams not found');
+  const courts = (await (await request.get(`${baseURL}/api/courts`, { headers })).json()) as Array<{
+    id: string;
+    name: string;
+  }>;
+  sessionSeq += 1;
+  const date = new Date(
+    Date.now() + (10 + sessionSeq + Math.floor(Math.random() * 300)) * 86_400_000,
+  )
+    .toISOString()
+    .slice(0, 10);
+  const created = await request.post(`${baseURL}/api/sessions`, {
+    data: {
+      date,
+      firstSlotTime: '18:30',
+      slotLengthMinutes: 42,
+      slotCount: 1,
+      linkShorterToLonger: true,
+      published: true,
+    },
+    headers,
+  });
+  if (!created.ok()) throw new Error(`create session: ${created.status()} ${await created.text()}`);
+  const sessionId = ((await created.json()) as { id: string }).id;
+  const pairs = [
+    [comp.teams[0]!.id, comp.teams[1]!.id],
+    [comp.teams[2]!.id, comp.teams[3]!.id],
+  ];
+  const grid = await request.put(`${baseURL}/api/sessions/${sessionId}/grid`, {
+    data: {
+      slotCount: 1,
+      fixtures: pairs
+        .slice(0, Math.min(2, courts.length))
+        .map(([home, away], i) => ({
+          competitionId: comp.id,
+          homeTeamId: home,
+          awayTeamId: away,
+          slotIndex: 0,
+          courtId: courts[i]!.id,
+        })),
+    },
+    headers,
+  });
+  if (!grid.ok()) throw new Error(`grid: ${grid.status()} ${await grid.text()}`);
   const live = await admin.emit('session:goLive', { sessionId });
   if (!live.ok) throw new Error(live.error.message);
   const snap = await admin.snapshot();

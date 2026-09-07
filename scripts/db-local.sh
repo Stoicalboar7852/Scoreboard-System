@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs a private PostgreSQL 16 cluster inside the project folder (.local/postgres)
-# for development and tests when Docker is not available.
+# for development and tests when Docker is not available. The data lives in .local.nosync so
+# iCloud Drive never syncs or evicts database files when the project sits in a synced folder.
 #
 #   pnpm db:local start    # init (first time) and start on port 54329
 #   pnpm db:local stop
@@ -12,8 +13,8 @@ set -euo pipefail
 export LC_ALL=C
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DATA_DIR="$ROOT_DIR/.local/postgres"
-LOG_FILE="$ROOT_DIR/.local/postgres.log"
+DATA_DIR="$ROOT_DIR/.local.nosync/postgres"
+LOG_FILE="$ROOT_DIR/.local.nosync/postgres.log"
 PORT="${PGPORT_LOCAL:-54329}"
 DB_USER="scoreboard"
 DB_PASSWORD="scoreboard"

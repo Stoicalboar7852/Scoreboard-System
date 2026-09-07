@@ -207,12 +207,17 @@ export function attachGateway(app: FastifyInstance, s: Services): AppIo {
     });
 
     handle('court:join', async ({ courtId, role }) => {
-      const court = await live.ensureCourt(courtId);
-      if (!court) throw new AppError('NOT_FOUND', 404, `Court ${courtId} not found`);
-      if (socket.data.courtId && socket.data.courtId !== courtId)
-        await socket.leave(courtRoom(socket.data.courtId));
+      // Record the court before any await: a controller re-joining after a reconnect replays
+      // its queued taps straight after this packet, and those are checked against socket.data.
+      const previous = socket.data.courtId;
       socket.data.courtId = courtId;
       socket.data.role = role;
+      const court = await live.ensureCourt(courtId);
+      if (!court) {
+        socket.data.courtId = previous;
+        throw new AppError('NOT_FOUND', 404, `Court ${courtId} not found`);
+      }
+      if (previous && previous !== courtId) await socket.leave(courtRoom(previous));
       await socket.join(courtRoom(courtId));
       live.seen(courtId, role);
       if (role === 'CONTROLLER' && socket.data.device)
@@ -223,11 +228,12 @@ export function attachGateway(app: FastifyInstance, s: Services): AppIo {
     });
 
     handle('court:leave', async ({ courtId }) => {
-      await socket.leave(courtRoom(courtId));
+      // Clear before any await so a join → leave → join sequence resolves in packet order.
       if (socket.data.courtId === courtId) {
         socket.data.courtId = null;
         socket.data.role = null;
       }
+      await socket.leave(courtRoom(courtId));
       return null;
     });
 

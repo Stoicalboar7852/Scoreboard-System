@@ -38,7 +38,7 @@ docs/           ARCHITECTURE, DECISIONS, PROGRESS, KIOSK-SETUP, DEPLOY
 | `pnpm test` | Vitest across all packages |
 | `pnpm test:e2e` | Playwright smoke suite |
 | `pnpm build` | Production build (web dist + server bundle) |
-| `pnpm db:local {start,stop,status,reset}` | Project-private PostgreSQL without Docker |
+| `pnpm db:local {start,stop,status,reset}` | Project-private PostgreSQL without Docker (data in `.local.nosync/`) |
 
 ## Documentation
 

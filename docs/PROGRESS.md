@@ -16,7 +16,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 8 | Admin: sessions, manual entry, Excel import/export | done | Session list, slots × courts grid with badges, cell editor, import preview/commit, exports, print, publish |
 | 9 | Draw generation and finals | done | Season wizard, preview/commit with conflict report, regenerate per week, publish, lock ladder + finals with auto-resolution |
 | 10 | Results, ladders, public pages | done | Results editing, adjustments, ladder PNG/CSV/copy link, public /ladders, /ladders/:id, /draw/:id, /tonight |
-| 11 | Hardening | not started | |
+| 11 | Hardening | done | Load test 150 clients / 30 courts PASS, network-drop / full-night / a11y Playwright suites, security review tests, Lighthouse, iCloud recovery notes |
 | 12 | Deployment and hand-over | not started | |
 
 ### Phase 1 — Shared domain package
@@ -202,6 +202,46 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 - Verified in a headless browser: entered 40–30 for Pairs Aces on the Results page; the public ladder
   showed Pairs Aces first with 4 bonus and 10 points on the next load, plus round results/fixtures;
   `/ladders`, `/draw/:id` and `/tonight` rendered without console errors.
+
+### Phase 11 — Hardening
+- Load test (`pnpm --filter @scoreboard/server load:test`, D-050): 30 admin + 30 controller + 90
+  scoreboard sockets on 30 courts, 450 taps in 30 s, 0 errors. Score ack p50 35 ms / p95 51 ms /
+  max 78 ms; tap → scoreboard propagation p50 34 ms / p95 50 ms / max 78 ms (1350/1350 broadcasts
+  received); clock fan-out p95 3 ms; time-sync offset spread across 150 clients 2.0 ms. All §4.6
+  targets met (< 200 ms propagation, clocks within 100 ms). Result: PASS.
+- Playwright (`pnpm test:e2e`, own `scoreboard_e2e` database, D-047/D-048): 5 suites pass in 44 s —
+  controller smoke, healthz, network drop (controller taps while offline are queued and replayed on
+  reconnect with the scoreboard catching up), full night (two linked slots with 2–4 s halves through
+  WAITING_FOR_LINKED, game end, slot advance and session end), accessibility (axe-core WCAG 2.0/2.1
+  A+AA on the controller, scoreboard, admin login, admin competitions, public ladders and tonight
+  pages: no serious or critical issues).
+- Security review (§4.5) as tests in `apps/server/test/health.test.ts`: CSP/HSTS/nosniff/frame headers,
+  HttpOnly + SameSite + signed cookies, no hash fields in any API response, per-IP rate limits on
+  public endpoints, oversized body and malformed JSON rejected with typed errors. Clock restart recovery
+  (chronological replay across linked clocks, D-021) remains covered by the Phase 3 live tests.
+- Fixes found by the hardening tests: browser `offline`/`online` events now drop and re-open the
+  socket immediately (the badge no longer sticks on "offline"); `court:join` and `court:leave` record
+  the socket's court synchronously so a queued replay after reconnect is never rejected as FORBIDDEN;
+  `longestFormat` compares raw seconds (two formats rounding to the same slot minute were tied);
+  static serving switched to wildcard mode with real 404s for missing files (D-051); Zod set to
+  jitless so the strict CSP logs no `eval` violation (D-052); `@scoreboard/shared` marked side-effect
+  free (entry chunk 492 KB → 390 KB).
+- A suspected double `court:join` on scoreboard load was an artefact of the per-file static mode
+  serving stale `index.html` after a rebuild; with the fix a fresh load emits exactly one join and no
+  leave (verified with a WebSocket frame count).
+- Lighthouse 12.8.2 (the PWA category no longer exists in Lighthouse 12; installability was checked
+  directly: service worker active, manifest served with `display: fullscreen` and two icons, zero CSP
+  violations). Mobile preset (simulated slow 4G, 4× CPU): scoreboard 72 / 100 / 100, controller
+  86 / 100 / 100, tonight 83 / 100 / 100 (performance / accessibility / best practices). Desktop
+  preset on the scoreboard, the kiosk profile: 99 / 100 / 100 with FCP 0.7 s, LCP 0.9 s, TBT 50 ms,
+  CLS 0.002. The mobile performance gap is the ~390 KB entry chunk over a simulated 1.5 Mbps link;
+  on the venue LAN the service worker precaches every asset, so a kiosk reload is served locally.
+- Environment incident (documented in `docs/RECOVERY.md`, D-049): the project folder is inside iCloud
+  Drive on a 97 %-full disk, and macOS evicted node_modules, most of `.git` and the web sources, which
+  made Node imports and git hang silently. The pnpm virtual store now lives in `.pnpm.nosync` and the
+  local PostgreSQL cluster in `.local.nosync`; evicted sources were restored and `git fsck` is clean.
+- `pnpm typecheck`, `pnpm lint` (0 errors, 7 react-refresh warnings) and `pnpm test`
+  (224 shared + 57 server + 65 web = 346 tests) pass.
 
 ## Known gaps / TODO register
 

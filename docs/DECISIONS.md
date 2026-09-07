@@ -139,3 +139,22 @@ implementation and are open for the owner to overturn.
   refresh without any push infrastructure for ladders.
 - D-046 (Phase 10): The ladder PNG snapshot is rendered client-side from the admin ladder DOM
   (html-to-image), so it always matches what the admin sees and needs no server-side browser.
+- D-047 (Phase 11): Every Playwright test creates its own session on a unique future date (via the
+  REST API) instead of reusing the seeded "tonight" session, because ending a night completes its
+  session and a completed session cannot go live again.
+- D-048 (Phase 11): The full-night end-to-end test uses throw-away game formats with 2–4 second halves
+  so two linked slots run in well under a minute while exercising the real scheduler and reducer.
+- D-049 (Phase 11): pnpm's virtual store lives in `.pnpm.nosync` and the local PostgreSQL cluster in
+  `.local.nosync` so iCloud Drive can neither sync nor evict them when the project folder is inside a
+  synced location (see `docs/RECOVERY.md`); both names are harmless on any other machine.
+- D-050 (Phase 11): The load test measures tap → scoreboard propagation as the time from a
+  controller's emit to each scoreboard's `court:state` arrival (server ack in between), and reports
+  p50/p95/max plus the spread of time-sync offsets across all clients against the §4.6 targets.
+- D-051 (Phase 11): The server serves the SPA through `@fastify/static` in wildcard mode (files are
+  resolved per request, not globbed once at boot) and the SPA fallback only answers extension-less
+  paths. A rebuilt `apps/web/dist` under a running server is therefore picked up immediately, and a
+  missing hashed asset returns a real 404 instead of `index.html` with a MIME-type error.
+- D-052 (Phase 11): The web entry sets `z.config({ jitless: true })` because Zod 4 otherwise probes
+  `new Function()` on first parse, which the strict CSP blocks and Chrome logs as an issue (Lighthouse
+  best-practices 96 → 100); `@scoreboard/shared` is marked `sideEffects: false` so bundlers can drop
+  domain modules a page never imports (the entry chunk fell from 492 KB to 390 KB).

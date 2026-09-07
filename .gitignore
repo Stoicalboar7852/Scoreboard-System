@@ -1,8 +1,10 @@
 node_modules/
+.pnpm.nosync/
 dist/
 build/
 coverage/
 .local/
+.local.nosync/
 *.log
 .env
 .env.*

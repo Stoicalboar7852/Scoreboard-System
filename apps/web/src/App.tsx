@@ -30,6 +30,15 @@ const Seasons = lazy(() =>
 const Competitions = lazy(() =>
   import('./routes/admin/Competitions.js').then((m) => ({ default: m.Competitions })),
 );
+const Sessions = lazy(() =>
+  import('./routes/admin/Sessions.js').then((m) => ({ default: m.Sessions })),
+);
+const SessionEditor = lazy(() =>
+  import('./routes/admin/SessionEditor.js').then((m) => ({ default: m.SessionEditor })),
+);
+const PrintView = lazy(() =>
+  import('./routes/admin/sessions/PrintView.js').then((m) => ({ default: m.PrintView })),
+);
 const ControllerIndex = lazy(() =>
   import('./routes/controller/ControllerIndex.js').then((m) => ({ default: m.ControllerIndex })),
 );
@@ -99,6 +108,14 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: '/admin/sessions/:id/print',
+    element: (
+      <Boundary label="Print">
+        <PrintView />
+      </Boundary>
+    ),
+  },
+  {
     path: '/admin',
     element: (
       <Boundary label="Admin">
@@ -112,6 +129,22 @@ const router = createBrowserRouter([
         element: (
           <Boundary label="Live control">
             <Live />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'sessions',
+        element: (
+          <Boundary label="Sessions">
+            <Sessions />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'sessions/:id',
+        element: (
+          <Boundary label="Session">
+            <SessionEditor />
           </Boundary>
         ),
       },

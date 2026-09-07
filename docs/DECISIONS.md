@@ -118,3 +118,10 @@ implementation and are open for the owner to overturn.
   time outs stay in seconds.
 - D-037 (Phase 7): The finals template is edited as JSON validated by the shared schema rather than a
   bespoke form, since the default template covers the venue and custom brackets are rare.
+- D-038 (Phase 8): The grid editor keeps a local draft and validates it with the shared validator on
+  every change; the server re-validates on save and returns its issues, so badges never depend on a
+  round trip but the server stays authoritative.
+- D-039 (Phase 8): Import previews check incoming rows against fixtures already in the target session,
+  so a re-import cannot double-book what the admin entered by hand.
+- D-040 (Phase 8): Fixtures that have been played can only be moved between cells in the grid; scores
+  and teams are edited on the Results page so an accidental grid edit cannot change a result.

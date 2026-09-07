@@ -13,7 +13,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 5 | Controller | done | PIN gate, court picker, exact layout, all phases, time outs, idle rules, optimistic/offline scoring, Playwright smoke |
 | 6 | Scoreboard | done | Kiosk page, one-time picker, proportional 1080p/4K scaling, optional horn, KIOSK-SETUP.md |
 | 7 | Admin: live control and setup | done | Login/layout, /admin/live (clocks, court grid, quick game, warnings), settings/courts/formats/seasons/competitions with ladder rule editor, teams, players, clash links |
-| 8 | Admin: sessions, manual entry, Excel import/export | not started | |
+| 8 | Admin: sessions, manual entry, Excel import/export | done | Session list, slots × courts grid with badges, cell editor, import preview/commit, exports, print, publish |
 | 9 | Draw generation and finals | not started | |
 | 10 | Results, ladders, public pages | not started | |
 | 11 | Hardening | not started | |
@@ -141,10 +141,32 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   Fours) → Start → Half 1 running with courts showing live fixtures; competitions, settings, courts,
   formats and seasons pages render with the seeded data and no console errors.
 
+### Phase 8 — Admin: sessions, manual entry, Excel import/export
+- `/admin/sessions`: date-range and season filters, New session dialog (date, season, first slot, slot
+  length pre-filled from the longest format, slots, link flag), delete (blocked while live), season
+  export (.xlsx).
+- `/admin/sessions/:id`: slots × courts grid with slot start times, fixture cards, instant validation
+  badges from the shared `validateNight` (double booking, team twice, clash link, court format, mixed
+  formats, slot range), add/remove slots (fixtures in a removed slot become unscheduled), cell editor
+  dialog (competition → home → away, ad-hoc names, bye, move via slot/court; played games only move),
+  byes/unscheduled panel, Save (one transaction via `PUT /grid`), Publish/Unpublish, Export .xlsx, Print
+  (`/admin/sessions/:id/print`), read-only while the session is live.
+- Import dialog: template download, .xlsx/.csv upload, "create missing teams", row-by-row preview
+  with errors/warnings and session-level conflicts (including against fixtures already in the
+  session), commit enabled only when nothing blocks; commit writes all rows in one transaction.
+- `docs/fixtures-template.xlsx` generated from the same builder the API serves
+  (`pnpm --filter @scoreboard/server exec tsx scripts/make-template.ts`).
+- Tests: gridModel (4), SessionGrid (2), ImportPreviewTable (2). Web suite: 15 files, 59 tests.
+- Verified in a headless browser: created a session, added a fixture by hand, saved; a sheet with
+  deliberate errors (unknown court, off-slot time, unknown competition, double booking with the manual
+  fixture) was rejected row by row with commit disabled; a clean sheet with a new team imported in one
+  transaction (3 fixtures, 1 team created, 1 bye) and appeared in the grid.
+
 ## Known gaps / TODO register
 
-- T-001: intermittent `apps/server/test/sessions.test.ts` failure seen once in a full run (Phase 4);
-  passes in isolation and on reruns. Investigate if it recurs (suspect cross-file DB timing).
+- T-001 (resolved in Phase 8): the intermittent `sessions.test.ts` failure was nondeterministic ordering
+  of fixtures created in one transaction (identical `createdAt`). Session fixtures are now ordered by
+  slot, court display order, creation time and id; three consecutive full runs pass.
 
 ## Phase logs
 

@@ -65,7 +65,12 @@ export class SessionsService {
     const fixtures = await this.db.fixture.findMany({
       where: { sessionId: id },
       include: fixtureInclude,
-      orderBy: [{ slotIndex: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [
+        { slotIndex: 'asc' },
+        { court: { displayOrder: 'asc' } },
+        { createdAt: 'asc' },
+        { id: 'asc' },
+      ],
     });
     const issues = await this.validateRows(row, fixtures);
     return { session: mapSession(row), fixtures: fixtures.map(mapFixtureWithNames), issues };

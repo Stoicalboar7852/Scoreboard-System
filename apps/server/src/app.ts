@@ -1,28 +1,140 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
+import multipart from '@fastify/multipart';
+import { type PrismaClient } from '@prisma/client';
 import { type AppConfig } from './config.js';
+import { createPrisma } from './db/prisma.js';
+import { errorHandler } from './errors.js';
+import { systemNow, type Now } from './lib/time.js';
+import { authPlugin } from './plugins/auth.js';
+import { securityPlugin } from './plugins/security.js';
+import { createServices, type Services } from './services/index.js';
+import { registerAuthRoutes } from './routes/auth.routes.js';
+import { registerSettingsRoutes } from './routes/settings.routes.js';
+import { registerCourtRoutes } from './routes/courts.routes.js';
+import { registerFormatRoutes } from './routes/formats.routes.js';
+import { registerSeasonRoutes } from './routes/seasons.routes.js';
+import { registerCompetitionRoutes } from './routes/competitions.routes.js';
+import { registerTeamRoutes } from './routes/teams.routes.js';
+import { registerPlayerRoutes } from './routes/players.routes.js';
+import { registerClashLinkRoutes } from './routes/clashLinks.routes.js';
+import { registerSessionRoutes } from './routes/sessions.routes.js';
+import { registerFixtureRoutes } from './routes/fixtures.routes.js';
+import { registerAdjustmentRoutes } from './routes/adjustments.routes.js';
+import { registerLadderRoutes } from './routes/ladders.routes.js';
+import { registerImportRoutes } from './routes/import.routes.js';
+import { registerExportRoutes } from './routes/export.routes.js';
+import { registerPublicRoutes } from './routes/public.routes.js';
+import { registerControllerRoutes } from './routes/controller.routes.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
+  db?: PrismaClient;
+  now?: Now;
 }
 
-/** Creates the Fastify instance. Phase 0: health check only; later phases add plugins. */
-export async function buildApp({ config }: BuildAppOptions): Promise<FastifyInstance> {
+declare module 'fastify' {
+  interface FastifyInstance {
+    services: Services;
+  }
+}
+
+/** Creates the Fastify instance with plugins, services and REST routes. */
+export async function buildApp({
+  config,
+  db,
+  now = systemNow,
+}: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
-      level: config.LOG_LEVEL,
+      level: config.isTest ? 'silent' : config.LOG_LEVEL,
       ...(config.isProduction || config.isTest
         ? {}
         : { transport: { target: 'pino-pretty', options: { colorize: true } } }),
     },
     trustProxy: config.TRUST_PROXY,
     genReqId: () => crypto.randomUUID(),
+    bodyLimit: 2 * 1024 * 1024,
   });
 
-  app.get('/healthz', async () => ({
-    status: 'ok',
-    version: config.APP_VERSION,
-    uptimeSeconds: Math.round(process.uptime()),
-  }));
+  const prisma = db ?? createPrisma(config);
+  const services = createServices(config, prisma, app.log, now);
+  app.decorate('services', services);
+
+  app.setErrorHandler(errorHandler);
+
+  await app.register(securityPlugin, { config });
+  await app.register(authPlugin, { auth: services.auth });
+  await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+
+  app.get('/healthz', { config: { rateLimit: false } }, async (_request, reply) => {
+    let database: 'ok' | 'error' = 'ok';
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      database = 'error';
+    }
+    const body = {
+      status: database === 'ok' ? 'ok' : 'degraded',
+      version: config.APP_VERSION,
+      database,
+      uptimeSeconds: Math.round(process.uptime()),
+    };
+    return reply.status(database === 'ok' ? 200 : 503).send(body);
+  });
+
+  registerAuthRoutes(app, services);
+  registerSettingsRoutes(app, services);
+  registerCourtRoutes(app, services);
+  registerFormatRoutes(app, services);
+  registerSeasonRoutes(app, services);
+  registerCompetitionRoutes(app, services);
+  registerTeamRoutes(app, services);
+  registerPlayerRoutes(app, services);
+  registerClashLinkRoutes(app, services);
+  registerSessionRoutes(app, services);
+  registerFixtureRoutes(app, services);
+  registerAdjustmentRoutes(app, services);
+  registerLadderRoutes(app, services);
+  registerImportRoutes(app, services);
+  registerExportRoutes(app, services);
+  registerPublicRoutes(app, services);
+  registerControllerRoutes(app, services);
+
+  // Serve the built SPA whenever the dist folder exists (always in Docker; locally after `pnpm build`).
+  const webDist = resolve(process.cwd(), config.WEB_DIST_DIR);
+  const serveWeb = existsSync(webDist) && !config.isTest;
+  if (serveWeb) {
+    await app.register(fastifyStatic, {
+      root: webDist,
+      prefix: '/',
+      wildcard: false,
+      setHeaders: (res, path) => {
+        if (/\/(sw\.js|index\.html|manifest\.webmanifest)$/.test(path))
+          res.setHeader('Cache-Control', 'no-cache');
+        else if (/\/assets\//.test(path))
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    });
+  }
+  app.setNotFoundHandler(async (request, reply) => {
+    const isApi =
+      request.url.startsWith('/api/') ||
+      request.url.startsWith('/socket.io') ||
+      request.url === '/healthz';
+    if (serveWeb && !isApi && request.method === 'GET') {
+      return reply.type('text/html').header('Cache-Control', 'no-cache').sendFile('index.html');
+    }
+    return reply.status(404).send({
+      error: { code: 'NOT_FOUND', message: `Route ${request.method} ${request.url} not found` },
+    });
+  });
+
+  app.addHook('onClose', async () => {
+    if (!db) await prisma.$disconnect();
+  });
 
   return app;
 }

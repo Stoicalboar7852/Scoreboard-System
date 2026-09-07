@@ -5,6 +5,7 @@ import {
   isoDateSchema,
   nameSchema,
   nonNegativeIntSchema,
+  placeholderRefSchema,
   positiveIntSchema,
   shortNameSchema,
   timeOfDaySchema,
@@ -124,14 +125,6 @@ export const sessionSchema = z.object({
   published: z.boolean(),
 });
 export type Session = z.infer<typeof sessionSchema>;
-
-/** A reference to a finals participant that is resolved once results are known. */
-export const placeholderRefSchema = z.union([
-  z.object({ seed: positiveIntSchema }),
-  z.object({ winnerOf: z.string().min(1) }),
-  z.object({ loserOf: z.string().min(1) }),
-]);
-export type PlaceholderRef = z.infer<typeof placeholderRefSchema>;
 
 export const fixtureSchema = z.object({
   id: uuidSchema,

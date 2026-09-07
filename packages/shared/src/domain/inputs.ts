@@ -4,6 +4,7 @@ import {
   isoDateSchema,
   nameSchema,
   nonNegativeIntSchema,
+  placeholderRefSchema,
   positiveIntSchema,
   shortNameSchema,
   timeOfDaySchema,
@@ -15,7 +16,7 @@ import {
   nightOfWeekSchema,
   teamSideSchema,
 } from './enums.js';
-import { accentOverridesSchema, placeholderRefSchema } from './entities.js';
+import { accentOverridesSchema } from './entities.js';
 import { ladderRuleSchema } from '../ladder/rule.js';
 import { finalsTemplateSchema } from '../finals/template.js';
 

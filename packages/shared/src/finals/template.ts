@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { placeholderRefSchema } from '../domain/entities.js';
+import { placeholderRefSchema } from '../domain/common.js';
 
 export const finalsMatchSchema = z.object({
   /** Short unique key such as SF1, PF, GF. Doubles as the fixture stage where it matches. */

@@ -1,4 +1,4 @@
-import { type PlaceholderRef } from '../domain/entities.js';
+import { type PlaceholderRef } from '../domain/common.js';
 import { type FixtureStatus, type TeamSide } from '../domain/enums.js';
 import { type FinalsTemplate } from './template.js';
 

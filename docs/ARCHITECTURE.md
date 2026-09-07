@@ -48,3 +48,26 @@ transition bumps `version` and returns ordered effects the server must perform:
 
 Expiry is anchored to the true phase end (`phaseStartedAtMs + phaseDurationMs`), not to the
 moment the scheduler fired, so late timers never accumulate drift.
+
+## Server (`apps/server`)
+
+```
+src/
+  index.ts          bootstrap, graceful shutdown (SIGTERM/SIGINT)
+  app.ts            buildApp({ config, db, now }) — plugins, services, routes, SPA static serving
+  config.ts         Zod-validated environment (loads the nearest .env)
+  errors.ts         AppError hierarchy + central error handler (never leaks stacks)
+  plugins/          security (cookie, CORS, helmet, rate-limit), auth (request.admin / request.device)
+  services/         auth, settings, ladder (cached), fixtures (results, finals), sessions (grid + validation),
+                    clash (explicit + roster-derived), draw (generator I/O), import, export
+  routes/           one file per resource; every body/query parsed with the shared Zod schemas
+  mappers/          Prisma rows → shared entity shapes (dates → epoch ms)
+prisma/             schema.prisma, migrations/, seed.ts
+test/               integration tests on a real PostgreSQL test database
+```
+
+Authentication: `POST /api/auth/login` sets a signed HTTP-only cookie holding an `AdminSession` id;
+`POST /api/auth/controller` exchanges the venue PIN for a device token returned once and stored hashed.
+Every request resolves `request.admin` and `request.device`; routes declare `requireAdmin`,
+`requireController` or `requireAdminOrController` pre-handlers. Public routes are unauthenticated,
+rate-limited and read-only.

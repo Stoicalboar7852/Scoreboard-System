@@ -7,7 +7,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 |-------|------|--------|-------|
 | 0 | Scaffold | done | pnpm workspace, Fastify /healthz, Vite placeholder, Docker/Compose/Caddy, local Postgres script |
 | 1 | Shared domain package | done | 224 tests, 97% statements / 91% branches coverage |
-| 2 | Database and REST API | not started | |
+| 2 | Database and REST API | done | Prisma schema + init migration, auth, CRUD, ladders, import/export, audit, 30 integration tests |
 | 3 | Real-time layer | not started | |
 | 4 | Web app shell | not started | |
 | 5 | Controller | not started | |
@@ -30,6 +30,23 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 - Draw performance test (10 competitions × 12 teams × 20 weeks, 4 nights, 10 courts, clash links)
   runs in about 1 s on the dev laptop against the 10 s target.
 - `pnpm typecheck` and `pnpm lint`: pass.
+
+### Phase 2 — Database and REST API
+- Prisma schema for every §5 entity plus `AdminSession`, `CourtFormat`, `FinalsSeed`; one `init` migration
+  applied on boot by the Docker entrypoint (`prisma migrate deploy`).
+- Fastify app: cookie sessions (argon2 password, signed HTTP-only cookie, DB-backed sessions), venue PIN →
+  device token (sha256 hashed), helmet CSP, CORS locked to `APP_ORIGIN`, global + per-route rate limits,
+  central error handler (`{ error: { code, message, details? } }`), append-only audit log.
+- Routes: settings, audit, courts, formats, seasons, competitions, teams, players, clash links (explicit +
+  derived from shared players), sessions (list/today/detail/validate/grid save/publish/delete), fixtures,
+  results, adjustments, ladders (cached), import (template/preview/commit in one transaction), export
+  (session xlsx, season xlsx, printable JSON, ladder CSV), public read-only endpoints, controller bootstrap.
+- `pnpm seed` builds the §14 demo venue (6 courts, Fours/Pairs, Monday 3×6 pairs, Wednesday fours+pairs
+  8 teams with two shared players, two generated 10-week draws, tonight's session, admin from `.env`).
+- `pnpm --filter @scoreboard/server test`: 8 files, 30 tests pass against `scoreboard_test`.
+- Root: `pnpm typecheck`, `pnpm lint`, `pnpm test` (224 shared + 30 server + 1 web) pass.
+- Verified manually: server boots on the seeded DB; `/healthz` reports database ok; public tonight/ladders,
+  login, admin settings, typed 401 and SPA fallback all respond correctly.
 
 ## Known gaps / TODO register
 

@@ -66,3 +66,16 @@ implementation and are open for the owner to overturn.
   one cycle the cycle repeats with home/away flipped, and the generator warns when it is shorter.
 - D-013 (Phase 1): Finals participants are resolved from a template each time results change rather
   than being written once, so a corrected semi-final score re-resolves the grand final automatically.
+- D-014 (Phase 2): Calendar dates (`Session.date`, `Season.startDate`, skipped dates) are stored as
+  `YYYY-MM-DD` strings interpreted in the venue timezone; instants (completedAt, phaseStartedAt) are
+  `timestamptz`. This keeps "tonight" unambiguous regardless of where the server runs.
+- D-015 (Phase 2): Admin sessions are rows in `AdminSession` referenced by a signed HTTP-only cookie, so
+  logout and password changes can revoke them server-side. Controller device tokens are stored hashed.
+- D-016 (Phase 2): Import previews live in server memory for 30 minutes (single-instance deployment);
+  commit re-reads exactly the previewed rows so what the admin saw is what gets written.
+- D-017 (Phase 2): Finals seeds are frozen in a `FinalsSeed` table when finals are generated; placeholder
+  participants are re-resolved from that table plus finals results on every result edit.
+- D-018 (Phase 2): Teams auto-created by an import get a short name derived from the first 12 characters;
+  the admin can rename it later.
+- D-019 (Phase 2): The seed prepares "tonight" on any weekday by copying the Wednesday week-1 fixtures into
+  a session dated today so the demo can run immediately; those results do count on the Wednesday ladders.

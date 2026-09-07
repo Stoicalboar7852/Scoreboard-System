@@ -25,3 +25,11 @@ export type EpochMs = number;
 
 export const nameSchema = z.string().trim().min(1).max(80);
 export const shortNameSchema = z.string().trim().min(1).max(12);
+
+/** A reference to a finals participant that is resolved once results are known. */
+export const placeholderRefSchema = z.union([
+  z.object({ seed: positiveIntSchema }),
+  z.object({ winnerOf: z.string().min(1) }),
+  z.object({ loserOf: z.string().min(1) }),
+]);
+export type PlaceholderRef = z.infer<typeof placeholderRefSchema>;

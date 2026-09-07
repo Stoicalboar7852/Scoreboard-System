@@ -1,0 +1,396 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---- Enums -----------------------------------------------------------------------
+
+enum SeasonStatus {
+  DRAFT
+  PUBLISHED
+  FINALS
+  COMPLETE
+}
+
+enum SessionStatus {
+  PLANNED
+  LIVE
+  COMPLETE
+}
+
+enum FixtureStage {
+  REGULAR
+  SF1
+  SF2
+  PF
+  GF
+}
+
+enum FixtureStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  FORFEIT
+  BYE
+  CANCELLED
+}
+
+enum TeamSide {
+  HOME
+  AWAY
+}
+
+enum ClockMode {
+  SINGLE
+  AUTO
+}
+
+enum ClockStatus {
+  IDLE
+  RUNNING
+  PAUSED
+}
+
+enum ClockPhase {
+  PRE_GAME
+  HALF_1
+  HALF_TIME
+  HALF_2
+  BETWEEN_GAMES
+  WAITING_FOR_LINKED
+  FINISHED
+}
+
+// ---- Venue configuration -----------------------------------------------------------
+
+/// Singleton row (id = "singleton").
+model Settings {
+  id                    String   @id @default("singleton")
+  venueName             String
+  timezone              String   @default("Australia/Sydney")
+  controllerPinHash     String?
+  nextGameWindowMinutes Int      @default(30)
+  defaultTimeoutSeconds Int      @default(60)
+  soundEnabled          Boolean  @default(false)
+  accentOverrides       Json     @default("{}")
+  updatedAt             DateTime @updatedAt
+}
+
+model Court {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  displayOrder     Int               @default(0)
+  active           Boolean           @default(true)
+  supportedFormats CourtFormat[]
+  fixtures         Fixture[]
+  liveState        CourtLiveState?
+  deviceTokens     DeviceToken[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model GameFormat {
+  id                  String        @id @default(uuid())
+  name                String        @unique
+  halfSeconds         Int
+  halfTimeSeconds     Int
+  betweenGamesSeconds Int
+  timeoutSeconds      Int           @default(60)
+  colour              String        @default("#FBBF24")
+  displayOrder        Int           @default(0)
+  courts              CourtFormat[]
+  competitions        Competition[]
+  clocks              Clock[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
+
+model CourtFormat {
+  courtId  String
+  formatId String
+  court    Court      @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  format   GameFormat @relation(fields: [formatId], references: [id], onDelete: Cascade)
+
+  @@id([courtId, formatId])
+}
+
+// ---- Competition structure ----------------------------------------------------------
+
+model Season {
+  id             String        @id @default(uuid())
+  name           String
+  /// YYYY-MM-DD in the venue timezone.
+  startDate      String
+  regularWeeks   Int
+  skippedDates   String[]      @default([])
+  finalsTemplate Json
+  status         SeasonStatus  @default(DRAFT)
+  competitions   Competition[]
+  sessions       Session[]
+  fixtures       Fixture[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Competition {
+  id           String             @id @default(uuid())
+  seasonId     String
+  season       Season             @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  name         String
+  nightOfWeek  Int
+  formatId     String
+  format       GameFormat         @relation(fields: [formatId], references: [id])
+  ladderRule   Json
+  displayOrder Int                @default(0)
+  published    Boolean            @default(false)
+  /// Set when the ladder is locked for finals (seeds are stored on fixtures).
+  ladderLockedAt DateTime?
+  teams        Team[]
+  fixtures     Fixture[]
+  adjustments  LadderAdjustment[]
+  finalsSeeds  FinalsSeed[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([seasonId, name])
+  @@index([nightOfWeek])
+}
+
+/// Ladder positions frozen when finals are generated.
+model FinalsSeed {
+  id            String      @id @default(uuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  teamId        String
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  seed          Int
+  createdAt     DateTime    @default(now())
+
+  @@unique([competitionId, seed])
+  @@unique([competitionId, teamId])
+}
+
+model Team {
+  id            String             @id @default(uuid())
+  competitionId String
+  competition   Competition        @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  name          String
+  shortName     String
+  colour        String?
+  players       TeamPlayer[]
+  homeFixtures  Fixture[]          @relation("HomeTeam")
+  awayFixtures  Fixture[]          @relation("AwayTeam")
+  clashLinksA   TeamClashLink[]    @relation("ClashA")
+  clashLinksB   TeamClashLink[]    @relation("ClashB")
+  adjustments   LadderAdjustment[]
+  finalsSeeds   FinalsSeed[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([competitionId, name])
+}
+
+model Player {
+  id        String       @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  teams     TeamPlayer[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model TeamPlayer {
+  teamId   String
+  playerId String
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, playerId])
+}
+
+/// Explicit "never in the same slot" link between two teams (usually different competitions).
+model TeamClashLink {
+  id        String   @id @default(uuid())
+  teamAId   String
+  teamBId   String
+  teamA     Team     @relation("ClashA", fields: [teamAId], references: [id], onDelete: Cascade)
+  teamB     Team     @relation("ClashB", fields: [teamBId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([teamAId, teamBId])
+}
+
+// ---- Nights and fixtures --------------------------------------------------------------
+
+model Session {
+  id                  String          @id @default(uuid())
+  seasonId            String?
+  season              Season?         @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  /// YYYY-MM-DD in the venue timezone.
+  date                String
+  nightOfWeek         Int
+  firstSlotTime       String
+  slotLengthMinutes   Int
+  slotCount           Int             @default(0)
+  linkShorterToLonger Boolean         @default(false)
+  status              SessionStatus   @default(PLANNED)
+  published           Boolean         @default(false)
+  fixtures            Fixture[]
+  clocks              Clock[]
+  courtStates         CourtLiveState[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([date])
+}
+
+model Fixture {
+  id            String         @id @default(uuid())
+  seasonId      String?
+  season        Season?        @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  competitionId String?
+  competition   Competition?   @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  sessionId     String?
+  session       Session?       @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  roundNumber   Int?
+  slotIndex     Int?
+  courtId       String?
+  court         Court?         @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  homeTeamId    String?
+  homeTeam      Team?          @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: SetNull)
+  awayTeamId    String?
+  awayTeam      Team?          @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: SetNull)
+  /// Ad-hoc names when no team is linked (quick games) or resolved placeholder labels.
+  homeName      String?
+  awayName      String?
+  stage         FixtureStage   @default(REGULAR)
+  finalsKey     String?
+  homeRef       Json?
+  awayRef       Json?
+  status        FixtureStatus  @default(SCHEDULED)
+  homeScore     Int            @default(0)
+  awayScore     Int            @default(0)
+  forfeitBy     TeamSide?
+  completedAt   DateTime?
+  resultNotes   String?
+  currentOn     CourtLiveState[] @relation("CurrentFixture")
+  nextOn        CourtLiveState[] @relation("NextFixture")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([sessionId, slotIndex, courtId])
+  @@index([competitionId, roundNumber])
+  @@index([status])
+}
+
+model LadderAdjustment {
+  id            String      @id @default(uuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  teamId        String
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  pointsDelta   Int
+  reason        String
+  createdBy     String
+  createdAt     DateTime    @default(now())
+}
+
+// ---- Live state (persisted on every change) -------------------------------------------
+
+model Clock {
+  id                 String      @id @default(uuid())
+  sessionId          String
+  session            Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  formatId           String?
+  format             GameFormat? @relation(fields: [formatId], references: [id], onDelete: SetNull)
+  label              String
+  mode               ClockMode   @default(AUTO)
+  status             ClockStatus @default(IDLE)
+  phase              ClockPhase  @default(PRE_GAME)
+  phaseDurationMs    Int
+  phaseStartedAt     DateTime?
+  remainingAtPauseMs Int?
+  linkedClockId      String?
+  slotIndex          Int         @default(0)
+  version            Int         @default(0)
+  courtStates        CourtLiveState[]
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+}
+
+model CourtLiveState {
+  courtId             String        @id
+  court               Court         @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sessionId           String?
+  session             Session?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  clockId             String?
+  clock               Clock?        @relation(fields: [clockId], references: [id], onDelete: SetNull)
+  currentFixtureId    String?
+  currentFixture      Fixture?      @relation("CurrentFixture", fields: [currentFixtureId], references: [id], onDelete: SetNull)
+  nextFixtureId       String?
+  nextFixture         Fixture?      @relation("NextFixture", fields: [nextFixtureId], references: [id], onDelete: SetNull)
+  homeScore           Int           @default(0)
+  awayScore           Int           @default(0)
+  timeoutActive       Boolean       @default(false)
+  timeoutStartedAt    DateTime?
+  timeoutDurationMs   Int           @default(0)
+  timeoutCalledBy     TeamSide?
+  lastControllerSeen  DateTime?
+  lastScoreboardSeen  DateTime?
+  version             Int           @default(0)
+  updatedAt           DateTime      @updatedAt
+}
+
+// ---- Accounts, devices, audit ------------------------------------------------------------
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  name         String
+  passwordHash String
+  sessions     AdminSession[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model AdminSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model DeviceToken {
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique
+  name       String
+  courtId    String?
+  court      Court?    @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  lastSeenAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actor     String
+  deviceId  String?
+  action    String
+  payload   Json
+  requestId String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+}

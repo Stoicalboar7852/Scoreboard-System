@@ -63,6 +63,8 @@ export class FixturesService {
       data: { ...scores, status: 'COMPLETED', completedAt: new Date(this.now()) },
     });
     this.ladders.invalidate(row.competitionId);
+    if (row.competitionId && row.stage !== 'REGULAR')
+      await this.resolveFinalsFor(row.competitionId, tx);
     return row;
   }
 

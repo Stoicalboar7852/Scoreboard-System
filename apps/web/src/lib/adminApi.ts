@@ -99,6 +99,80 @@ export interface AuditRow {
   requestId: string | null;
   createdAtMs: number;
 }
+export interface DrawNightInput {
+  nightOfWeek: number;
+  courtIds: string[];
+  firstSlotTime: string;
+  linkShorterToLonger: boolean;
+  extraSlots: number;
+}
+export interface DrawPreviewSession {
+  date: string;
+  nightOfWeek: number;
+  weekNumber: number;
+  slotCount: number;
+  slotLengthMinutes: number;
+  firstSlotTime: string;
+  fixtures: number;
+  byes: number;
+  competitions: string[];
+}
+export interface DrawConflict {
+  date: string;
+  nightOfWeek: number;
+  weekNumber: number;
+  fixture: { competitionId: string; homeTeamId: string; awayTeamId: string | null };
+  reason: string;
+  suggestions: string[];
+}
+export type DrawPreview =
+  | {
+      ok: true;
+      seed: number;
+      warnings: string[];
+      stats: { nightsPlanned: number; restarts: number; elapsedMs: number };
+      sessions: DrawPreviewSession[];
+    }
+  | {
+      ok: false;
+      seed: number;
+      warnings: string[];
+      stats: { nightsPlanned: number; restarts: number; elapsedMs: number };
+      conflicts: DrawConflict[];
+    };
+export interface DrawCommitResult {
+  sessionsCreated: number;
+  fixturesCreated: number;
+  sessionsReplaced: number;
+  seed: number;
+  warnings: string[];
+}
+export interface FinalsNightInput {
+  weekIndex: number;
+  date: string;
+  courtIds: string[];
+  firstSlotTime: string;
+  startSlotIndex: number;
+}
+export interface FinalsStatus {
+  competitionId: string;
+  competitionName: string;
+  lockedAtMs: number | null;
+  seeds: Array<{ seed: number; teamId: string; teamName: string }>;
+  matches: Array<{
+    key: string;
+    weekIndex: number;
+    weekName: string;
+    slotOffset: number;
+    home: { teamId: string | null; label: string };
+    away: { teamId: string | null; label: string };
+    fixtureId: string | null;
+    status: string | null;
+    homeScore: number;
+    awayScore: number;
+    date: string | null;
+  }>;
+}
 export interface LadderResult {
   competitionId: string;
   competitionName: string;
@@ -229,5 +303,33 @@ export const adminApi = {
   },
   ladders: {
     get: (competitionId: string) => api<LadderResult>(`/api/ladders/${competitionId}`),
+  },
+  draw: {
+    preview: (body: {
+      seasonId: string;
+      weeks?: number;
+      nights: DrawNightInput[];
+      seed?: number;
+    }) => api<DrawPreview>('/api/draw/preview', { method: 'POST', body }),
+    commit: (body: {
+      seasonId: string;
+      weeks?: number;
+      nights: DrawNightInput[];
+      seed: number;
+      onlyWeeks?: number[];
+      replaceExisting: boolean;
+    }) => api<DrawCommitResult>('/api/draw/commit', { method: 'POST', body }),
+    publishSeason: (seasonId: string, published: boolean) =>
+      api<Season>(`/api/seasons/${seasonId}/publish`, { method: 'POST', body: { published } }),
+  },
+  finals: {
+    status: (competitionId: string) => api<FinalsStatus>(`/api/finals/${competitionId}`),
+    generate: (body: { competitionId: string; nights: FinalsNightInput[] }) =>
+      api<{ seeds: FinalsStatus['seeds']; fixturesCreated: number; sessionsCreated: number }>(
+        '/api/finals/generate',
+        { method: 'POST', body },
+      ),
+    unlock: (competitionId: string) =>
+      api<{ ok: true }>(`/api/finals/${competitionId}/unlock`, { method: 'POST' }),
   },
 };

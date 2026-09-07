@@ -29,6 +29,8 @@ import { registerImportRoutes } from './routes/import.routes.js';
 import { registerExportRoutes } from './routes/export.routes.js';
 import { registerPublicRoutes } from './routes/public.routes.js';
 import { registerControllerRoutes } from './routes/controller.routes.js';
+import { registerDrawRoutes } from './routes/draw.routes.js';
+import { registerFinalsRoutes } from './routes/finals.routes.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -107,6 +109,8 @@ export async function buildApp({
   registerExportRoutes(app, services);
   registerPublicRoutes(app, services);
   registerControllerRoutes(app, services);
+  registerDrawRoutes(app, services);
+  registerFinalsRoutes(app, services);
 
   // Serve the built SPA whenever the dist folder exists (always in Docker; locally after `pnpm build`).
   const webDist = resolve(process.cwd(), config.WEB_DIST_DIR);

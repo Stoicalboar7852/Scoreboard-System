@@ -39,6 +39,9 @@ const SessionEditor = lazy(() =>
 const PrintView = lazy(() =>
   import('./routes/admin/sessions/PrintView.js').then((m) => ({ default: m.PrintView })),
 );
+const SeasonDraw = lazy(() =>
+  import('./routes/admin/SeasonDraw.js').then((m) => ({ default: m.SeasonDraw })),
+);
 const ControllerIndex = lazy(() =>
   import('./routes/controller/ControllerIndex.js').then((m) => ({ default: m.ControllerIndex })),
 );
@@ -177,6 +180,14 @@ const router = createBrowserRouter([
         element: (
           <Boundary label="Seasons">
             <Seasons />
+          </Boundary>
+        ),
+      },
+      {
+        path: 'seasons/:id/draw',
+        element: (
+          <Boundary label="Season draw">
+            <SeasonDraw />
           </Boundary>
         ),
       },

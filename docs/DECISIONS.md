@@ -125,3 +125,12 @@ implementation and are open for the owner to overturn.
   so a re-import cannot double-book what the admin entered by hand.
 - D-040 (Phase 8): Fixtures that have been played can only be moved between cells in the grid; scores
   and teams are edited on the Results page so an accidental grid edit cannot change a result.
+- D-041 (Phase 9): Draw commit re-runs the generator from the previewed seed instead of storing the
+  preview; the generator is deterministic so what was previewed is exactly what is written.
+- D-042 (Phase 9): Regenerating one week keeps every other week's fixtures; the week's pairings are the
+  same (round robin is fixed) and only the slot/court placement changes.
+- D-043 (Phase 9): Finals template keys that are not SF1/SF2/PF/GF are stored with stage GF in the last
+  template week and SF1 otherwise; the `finalsKey` column keeps the real key.
+- D-044 (Phase 9): Finals matches are placed on the requested night at `startSlot + slotOffset`, trying
+  the given courts in order and skipping any court where the shared validator reports a clash or
+  double booking; if no court works the generation fails with the issues rather than placing badly.

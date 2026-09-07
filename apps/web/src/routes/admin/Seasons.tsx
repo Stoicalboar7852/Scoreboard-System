@@ -154,6 +154,9 @@ export function Seasons() {
                     className="text-xs text-court underline"
                   >
                     manage
+                  </Link>{' '}
+                  <Link to={`/admin/seasons/${s.id}/draw`} className="text-xs text-court underline">
+                    draw &amp; finals
                   </Link>
                 </td>
                 <td>

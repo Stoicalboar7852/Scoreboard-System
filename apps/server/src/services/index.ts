@@ -7,6 +7,7 @@ import { AuthService } from './auth.service.js';
 import { ClashService } from './clash.service.js';
 import { DrawService } from './draw.service.js';
 import { ExportService } from './export.service.js';
+import { FinalsService } from './finals.service.js';
 import { FixturesService } from './fixtures.service.js';
 import { ImportService } from './import.service.js';
 import { LadderService } from './ladder.service.js';
@@ -27,6 +28,7 @@ export interface Services {
   importer: ImportService;
   exporter: ExportService;
   live: LiveService;
+  finals: FinalsService;
 }
 
 export function createServices(
@@ -57,6 +59,7 @@ export function createServices(
     importer: new ImportService(db, ladders, now),
     exporter: new ExportService(db, ladders),
     live: new LiveService({ db, now, log, ladders, fixtures, settings }),
+    finals: new FinalsService(db, ladders, clashes, fixtures),
   };
 }
 

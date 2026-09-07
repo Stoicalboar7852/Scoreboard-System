@@ -14,7 +14,7 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
 | 6 | Scoreboard | done | Kiosk page, one-time picker, proportional 1080p/4K scaling, optional horn, KIOSK-SETUP.md |
 | 7 | Admin: live control and setup | done | Login/layout, /admin/live (clocks, court grid, quick game, warnings), settings/courts/formats/seasons/competitions with ladder rule editor, teams, players, clash links |
 | 8 | Admin: sessions, manual entry, Excel import/export | done | Session list, slots × courts grid with badges, cell editor, import preview/commit, exports, print, publish |
-| 9 | Draw generation and finals | not started | |
+| 9 | Draw generation and finals | done | Season wizard, preview/commit with conflict report, regenerate per week, publish, lock ladder + finals with auto-resolution |
 | 10 | Results, ladders, public pages | not started | |
 | 11 | Hardening | not started | |
 | 12 | Deployment and hand-over | not started | |
@@ -161,6 +161,29 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   deliberate errors (unknown court, off-slot time, unknown competition, double booking with the manual
   fixture) was rejected row by row with commit disabled; a clean sheet with a new team imported in one
   transaction (3 fixtures, 1 team created, 1 bye) and appeared in the grid.
+
+### Phase 9 — Draw generation and finals
+- Server: `POST /api/draw/preview` (runs the shared generator, returns per-night summary or the
+  structured conflict report with suggestions, plus the seed used), `POST /api/draw/commit` (regenerates
+  deterministically from the seed and writes sessions + fixtures in one transaction; `onlyWeeks` +
+  `replaceExisting` regenerate a single week; live nights are protected), `POST /api/seasons/:id/publish`
+  (season + all its sessions), `FinalsService`: `POST /api/finals/generate` locks the ladder into
+  `FinalsSeed` rows, expands the template, places each match clash-aware on the given night/courts via
+  the shared validator, creates sessions as needed and sets the season to FINALS; `GET /api/finals/:id`
+  returns seeds and the resolved bracket; `POST /api/finals/:id/unlock` removes unplayed finals.
+  Placeholders re-resolve on every result edit and on live finalisation (drawn finals → higher seed).
+- Web: `/admin/seasons/:id/draw` wizard — nights & courts (courts, first slot, extra slots, link flag),
+  seed, Preview (summary table or conflict report), Save as draft sessions / regenerate one week /
+  replace existing, review links into the session grid, Publish season, and a Finals panel per
+  competition (dates per template week, courts, start slot, lock & generate, bracket with resolved
+  placeholders, unlock).
+- Tests: server `draw.test.ts` (7): demo Wednesday season previews with 10 sessions, 2 slots and zero
+  validation issues on every night; conflicts refuse to commit; commit/regenerate week 3/publish;
+  Monday 3-grade season; finals seed → placeholders → resolve as results arrive (drawn SF1 to seed 1),
+  corrected result re-resolves, unlock refused after games are played, too few teams refused. Web:
+  DrawSummary/ConflictReport (2). Root: 337 tests, typecheck and lint pass.
+- Verified in a headless browser: the seeded Wednesday season previews with 10 nights in 67 ms and
+  finals generate for C Grade Mixed Fours with SF1/SF2/PF/GF, seeds and placeholder labels.
 
 ## Known gaps / TODO register
 

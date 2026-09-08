@@ -34,12 +34,31 @@ init_cluster() {
   fi
 }
 
+# Something else listening on our port is almost always another checkout of this project, and
+# postgres only reports it in its log file, so check first and say so plainly (D-056).
+port_in_use() {
+  command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1
+}
+
 start_cluster() {
   init_cluster
   if pg_ctl -D "$DATA_DIR" status >/dev/null 2>&1; then
     echo "[db-local] already running on port $PORT"
   else
-    pg_ctl -D "$DATA_DIR" -l "$LOG_FILE" -w start >/dev/null
+    if port_in_use; then
+      echo "[db-local] port $PORT is already in use:"
+      lsof -nP -iTCP:"$PORT" -sTCP:LISTEN | tail -n +2 | sed 's/^/  /'
+      echo "[db-local] This is usually another copy of this project running its own cluster."
+      echo "[db-local] Either stop that one (run 'pnpm db:local stop' in that folder), or run this"
+      echo "[db-local] one on a free port and match it in .env:"
+      echo "[db-local]   PGPORT_LOCAL=54330 pnpm db:local start"
+      exit 1
+    fi
+    if ! pg_ctl -D "$DATA_DIR" -l "$LOG_FILE" -w start >/dev/null; then
+      echo "[db-local] the server did not start. Last lines of $LOG_FILE:"
+      tail -n 15 "$LOG_FILE" 2>/dev/null | sed 's/^/  /'
+      exit 1
+    fi
     echo "[db-local] started on port $PORT (log: $LOG_FILE)"
   fi
   for db in scoreboard scoreboard_test scoreboard_e2e; do

@@ -280,6 +280,15 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   (`docs/DEPLOY.md` §3).
 - G-002 (open, product): the Facebook integration is tested against a fake Graph API only; it needs
   a real Page access token to be exercised end-to-end (`docs/DEPLOY.md` §8).
+- G-004 (resolved): the ten-minute quick start failed on a genuinely fresh clone. `pnpm db:migrate`
+  could not see the repository-root `.env` (the Prisma CLI does not walk up like the app config
+  does), and because `prisma migrate dev` never ran, the Prisma client was never generated either,
+  so `pnpm seed` then failed with "@prisma/client did not initialize yet". Fixed by running the
+  `db:*` scripts through `apps/server/scripts/with-env.mjs` (D-056); the README gained a
+  troubleshooting table. Separately, a second checkout of the project holding port 54329 made
+  `pnpm db:local start` fail with only "Examine the log output"; the script now names the process
+  holding the port and suggests `PGPORT_LOCAL`. Verified by running the README steps verbatim in a
+  clean clone.
 - G-003 (open, performance): Lighthouse mobile performance is 72–86 because the entry chunk is
   ~390 KB over a simulated slow 4G link; the kiosk profile (desktop, LAN, service-worker precache)
   scores 99. Splitting vendor chunks further would trim first loads on phones.

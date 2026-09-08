@@ -1,5 +1,13 @@
 # Environment note (2026-09-08): iCloud Drive evicted project files — resolved, but read this
 
+> **Update:** the project has since been moved to `~/Movies/Scoreboard System`, which iCloud
+> Drive's "Desktop & Documents Folders" sync does not cover, so the root cause described below no
+> longer applies to this checkout. Two after-effects were cleaned up afterwards: six iCloud
+> conflict copies of throw-away diagnostic scripts (`e2e/_joins 2.mjs` and friends) had been
+> committed and broke `pnpm lint`, and a stale 17 MB `.local/postgres` cluster from before the
+> `.local.nosync` move can be deleted by hand. Keep the `.nosync` folder names: they cost nothing
+> elsewhere and protect anyone who does clone into a synced folder.
+
 ## What happened
 
 The project folder (`~/Documents/Scoreboard System`) is inside iCloud Drive ("Desktop & Documents

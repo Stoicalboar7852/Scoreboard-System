@@ -33,7 +33,7 @@ pnpm db:local start             # A: project-private PostgreSQL on port 54329, n
 docker compose up -d db         # B: PostgreSQL in Docker (then set DATABASE_URL port to 5432 in .env)
 
 # 3. Schema + demo venue
-pnpm db:migrate                 # applies the Prisma migrations
+pnpm db:migrate                 # applies the Prisma migrations and generates the Prisma client
 pnpm seed                       # 6 courts, Fours/Pairs, Monday + Wednesday seasons, draws, tonight's session
 
 # 4. Run
@@ -53,6 +53,16 @@ Then run the demo night:
 
 Shortcut for developers: `pnpm --filter @scoreboard/server dev:live go` takes tonight's session
 live and starts every clock without touching the UI (`end`, `reset`, `status` also exist).
+
+### If a step fails
+
+| Symptom | Cause and fix |
+|---------|---------------|
+| `pnpm db:local start` → `port 54329 is already in use` | Another copy of this project is running its own cluster. Stop it with `pnpm db:local stop` in that folder, or start this one elsewhere with `PGPORT_LOCAL=54330 pnpm db:local start` and change the port in `DATABASE_URL` in `.env`. |
+| `pg_ctl: could not start server` with no explanation | Read `.local.nosync/postgres.log`; the script prints its last lines for you. |
+| `Environment variable not found: DATABASE_URL` | `.env` is missing at the repository root: `cp .env.example .env`. The Prisma CLI is run through `scripts/with-env.mjs`, which loads that file. |
+| `@prisma/client did not initialize yet` | The client has not been generated for this checkout: run `pnpm db:migrate` (or `pnpm db:generate`). |
+| `pnpm db:local start` → `pg_ctl not found` | PostgreSQL 16 is not installed or not on `PATH`: `brew install postgresql@16`. |
 
 Production deployment (Docker Compose + Caddy with automatic HTTPS) is in `docs/DEPLOY.md`;
 kiosk and tablet setup in `docs/KIOSK-SETUP.md`.

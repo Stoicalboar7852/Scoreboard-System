@@ -170,3 +170,10 @@ implementation and are open for the owner to overturn.
 - D-055 (Phase 12): On-premises deployments reuse the same Compose stack; `CADDY_TLS="tls internal"`
   switches Caddy from Let's Encrypt to its internal CA because kiosks need a secure context for the
   service worker, wake lock and PWA install even on a LAN with no public DNS.
+- D-056 (post-hand-over fix): The Prisma CLI only reads `.env` from its own working directory and
+  the schema folder, so on a fresh clone `pnpm db:migrate` failed with "Environment variable not
+  found: DATABASE_URL" even though the monorepo root `.env` existed. The `db:*` scripts now run
+  through `apps/server/scripts/with-env.mjs`, which loads the nearest `.env` walking up (the same
+  rule `src/config.ts` uses) and then execs the command. `scripts/db-local.sh` also detects a port
+  already in use and names the process, instead of leaving "Examine the log output" as the only
+  clue when a second checkout holds port 54329.

@@ -146,15 +146,20 @@ export class AuthService {
   }
 
   /**
-   * Ensures the admin from the environment exists and can log in with the configured password
-   * (idempotent, runs on every boot). The environment is the single source of truth for this
-   * account: changing ADMIN_PASSWORD in `.env` and restarting rotates it (D-054).
+   * Ensures the admin from the environment exists, so a fresh database is usable without the demo
+   * seed (idempotent, runs on every boot).
+   *
+   * An existing account is left alone: the admin can change their own password in
+   * Settings, and re-applying ADMIN_PASSWORD on every restart would silently undo that (D-057).
+   * Pass `resetPassword` (ADMIN_PASSWORD_RESET=true) to force the stored password back to the
+   * configured one — the documented recovery path for a forgotten password.
    */
   async ensureAdmin(
     email: string,
     password: string,
-    name = 'Admin',
-  ): Promise<'created' | 'updated' | 'unchanged'> {
+    options: { resetPassword?: boolean; name?: string } = {},
+  ): Promise<'created' | 'reset' | 'unchanged'> {
+    const { resetPassword = false, name = 'Admin' } = options;
     const normalised = email.toLowerCase();
     const existing = await this.db.user.findUnique({ where: { email: normalised } });
     if (!existing) {
@@ -163,11 +168,12 @@ export class AuthService {
       });
       return 'created';
     }
+    if (!resetPassword) return 'unchanged';
     if (await verifyPassword(existing.passwordHash, password)) return 'unchanged';
     await this.db.user.update({
       where: { id: existing.id },
       data: { passwordHash: await hashPassword(password) },
     });
-    return 'updated';
+    return 'reset';
   }
 }

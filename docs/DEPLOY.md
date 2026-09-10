@@ -56,7 +56,7 @@ Edit `.env`. The variables that matter for production:
 | `TRUST_PROXY` | `true` (Compose sets it; Caddy is in front) |
 | `POSTGRES_PASSWORD` | a long random string (`openssl rand -hex 24`) |
 | `SESSION_SECRET` | a different 32+ character random string (`openssl rand -hex 32`) |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | the office login; the account is created (or its password rotated) on every boot |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | the office login; the account is created on first boot if it does not exist |
 | `CONTROLLER_PIN` | the initial referee PIN (rotate later in Admin → Settings) |
 | `VENUE_NAME` / `VENUE_TIMEZONE` | shown on every page; the timezone drives session dates and slot times |
 | `APP_VERSION` | any label, e.g. `2026.09.1`; changing it makes kiosks reload the new build |
@@ -197,6 +197,7 @@ post" and nothing else is affected.
 | Status | `docker compose ps` |
 | Who did what | `GET /api/audit?limit=200` with an admin session (append-only log of every change) |
 | Rotate the referee PIN | Admin → Settings (existing tablets keep their device token) |
+| Reset a forgotten admin password | Set `ADMIN_PASSWORD` and `ADMIN_PASSWORD_RESET=true` in `.env`, restart the app container once, then set the flag back to `false` |
 | Revoke a lost tablet | Admin → Settings → Registered controller devices → Revoke (the tablet must re-enter the PIN) |
 | Load headroom | `pnpm --filter @scoreboard/server load:test` against a staging copy (`LOAD_URL`) |
 
@@ -218,7 +219,9 @@ Common issues:
 - Unique `SESSION_SECRET`, `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`; `.env` mode 600.
 - Only ports 80/443 open; the database and app ports are not published by Compose.
 - Automatic OS security updates on the host; rebuild the image monthly for Node/Alpine patches.
-- The admin panel has no self-service password reset: rotate `ADMIN_PASSWORD` in `.env` and
-  restart. Sessions expire after `SESSION_TTL_HOURS`.
+- Admins change their own password in Admin → Settings, which signs out their other sessions.
+  A restart never overwrites that. If the password is forgotten, set `ADMIN_PASSWORD` to a new
+  value with `ADMIN_PASSWORD_RESET=true`, restart once, then set the flag back to `false`.
+  Sessions expire after `SESSION_TTL_HOURS`.
 - Referee tablets hold a device token, not the PIN; rotating the PIN does not log them out,
   revoking the device in Admin → Settings does.

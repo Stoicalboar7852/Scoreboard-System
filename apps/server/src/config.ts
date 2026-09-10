@@ -43,6 +43,7 @@ const envSchema = z.object({
   SESSION_TTL_HOURS: z.coerce.number().positive().default(72),
   ADMIN_EMAIL: z.string().email().default('admin@example.com'),
   ADMIN_PASSWORD: z.string().min(8).default('change-me-admin-password'),
+  ADMIN_PASSWORD_RESET: booleanString,
   CONTROLLER_PIN: z.string().min(4).default('1234'),
   VENUE_NAME: z.string().default('Demo Volleyball Centre'),
   VENUE_TIMEZONE: z.string().default('Australia/Sydney'),

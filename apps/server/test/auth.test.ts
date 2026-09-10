@@ -151,23 +151,50 @@ describe('admin bootstrap from the environment (D-054)', () => {
     await ctx.close();
   });
 
-  it('creates a missing admin, leaves a matching one alone and rotates a changed password', async () => {
+  it('creates a missing admin and matches on a case-insensitive email', async () => {
     const auth = ctx.app.services.auth;
     expect(await auth.ensureAdmin('ops@example.com', 'first-password-1')).toBe('created');
     expect(await auth.ensureAdmin('OPS@example.com', 'first-password-1')).toBe('unchanged');
-    expect(await auth.ensureAdmin('ops@example.com', 'second-password-2')).toBe('updated');
+  });
 
-    const old = await ctx.app.inject({
+  it('never undoes a password the admin changed in Settings (D-057)', async () => {
+    const auth = ctx.app.services.auth;
+    await auth.ensureAdmin('keeper@example.com', 'env-password-1');
+    const user = await ctx.db.user.findUniqueOrThrow({ where: { email: 'keeper@example.com' } });
+    await auth.changePassword(user.id, 'no-session', 'env-password-1', 'chosen-in-the-ui-2');
+
+    // A restart re-runs ensureAdmin with the unchanged environment value.
+    expect(await auth.ensureAdmin('keeper@example.com', 'env-password-1')).toBe('unchanged');
+
+    const chosen = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'ops@example.com', password: 'first-password-1' },
+      payload: { email: 'keeper@example.com', password: 'chosen-in-the-ui-2' },
     });
-    expect(old.statusCode).toBe(401);
-    const fresh = await ctx.app.inject({
+    expect(chosen.statusCode).toBe(200);
+  });
+
+  it('forces the environment password back when ADMIN_PASSWORD_RESET is set', async () => {
+    const auth = ctx.app.services.auth;
+    await auth.ensureAdmin('locked@example.com', 'env-password-1');
+    const user = await ctx.db.user.findUniqueOrThrow({ where: { email: 'locked@example.com' } });
+    await auth.changePassword(user.id, 'no-session', 'env-password-1', 'forgotten-password-2');
+
+    expect(
+      await auth.ensureAdmin('locked@example.com', 'env-password-1', { resetPassword: true }),
+    ).toBe('reset');
+
+    const recovered = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'ops@example.com', password: 'second-password-2' },
+      payload: { email: 'locked@example.com', password: 'env-password-1' },
     });
-    expect(fresh.statusCode).toBe(200);
+    expect(recovered.statusCode).toBe(200);
+    const stale = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'locked@example.com', password: 'forgotten-password-2' },
+    });
+    expect(stale.statusCode).toBe(401);
   });
 });

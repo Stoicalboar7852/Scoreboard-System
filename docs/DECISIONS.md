@@ -177,3 +177,11 @@ implementation and are open for the owner to overturn.
   rule `src/config.ts` uses) and then execs the command. `scripts/db-local.sh` also detects a port
   already in use and names the process, instead of leaving "Examine the log output" as the only
   clue when a second checkout holds port 54329.
+- D-057 (post-hand-over fix): The boot-time admin bootstrap no longer re-applies `ADMIN_PASSWORD`
+  to an account that already exists. D-054 had it rewrite the stored hash whenever the configured
+  password did not verify, which silently undid a password the admin had set in Admin → Settings
+  the next time the server restarted. Creating a missing account is still automatic; forcing the
+  environment password back is now opt-in via `ADMIN_PASSWORD_RESET=true`, which is the documented
+  recovery path for a forgotten password. `scripts/db-local.sh` also re-points
+  `unix_socket_directories` at the current data directory on every start, because initdb bakes in
+  an absolute path and the cluster stops working if the project folder is ever moved or renamed.

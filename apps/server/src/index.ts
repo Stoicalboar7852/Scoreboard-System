@@ -7,7 +7,9 @@ async function main(): Promise<void> {
   // Production bootstrap (D-054): settings row and the admin account come from the environment, so
   // a fresh database is usable without running the demo seed.
   await app.services.settings.ensure();
-  const admin = await app.services.auth.ensureAdmin(config.ADMIN_EMAIL, config.ADMIN_PASSWORD);
+  const admin = await app.services.auth.ensureAdmin(config.ADMIN_EMAIL, config.ADMIN_PASSWORD, {
+    resetPassword: config.ADMIN_PASSWORD_RESET,
+  });
   app.log.info({ email: config.ADMIN_EMAIL, admin }, 'admin account ensured');
 
   const shutdown = async (signal: string): Promise<void> => {

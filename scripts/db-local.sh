@@ -40,8 +40,23 @@ port_in_use() {
   command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1
 }
 
+# The socket directory is an absolute path baked into postgresql.conf at initdb time, so a cluster
+# stops working if the project folder is ever moved or renamed. Re-point it on every start (D-057).
+sync_socket_dir() {
+  local conf="$DATA_DIR/postgresql.conf"
+  [ -f "$conf" ] || return 0
+  if ! grep -q "^unix_socket_directories = '$DATA_DIR'$" "$conf"; then
+    local tmp="$conf.tmp.$$"
+    grep -v '^unix_socket_directories = ' "$conf" > "$tmp"
+    printf "unix_socket_directories = '%s'\n" "$DATA_DIR" >> "$tmp"
+    mv "$tmp" "$conf"
+    echo "[db-local] re-pointed the socket directory at $DATA_DIR (the project folder moved)"
+  fi
+}
+
 start_cluster() {
   init_cluster
+  sync_socket_dir
   if pg_ctl -D "$DATA_DIR" status >/dev/null 2>&1; then
     echo "[db-local] already running on port $PORT"
   else

@@ -289,6 +289,12 @@ results of `pnpm typecheck`, `pnpm lint` and `pnpm test`.
   `pnpm db:local start` fail with only "Examine the log output"; the script now names the process
   holding the port and suggests `PGPORT_LOCAL`. Verified by running the README steps verbatim in a
   clean clone.
+- G-005 (resolved): Admin → Settings has always offered "Change admin password", but the Phase 12
+  boot bootstrap (D-054) re-applied `ADMIN_PASSWORD` to any existing account whose hash no longer
+  matched, so the next restart silently reverted a password set in the UI. The bootstrap now only
+  creates a missing account; forcing the environment password back is opt-in via
+  `ADMIN_PASSWORD_RESET` (D-057). Covered by three auth tests. Found while documenting the feature
+  set for the README tutorial.
 - G-003 (open, performance): Lighthouse mobile performance is 72–86 because the entry chunk is
   ~390 KB over a simulated slow 4G link; the kiosk profile (desktop, LAN, service-worker precache)
   scores 99. Splitting vendor chunks further would trim first loads on phones.
